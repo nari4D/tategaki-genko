@@ -83,6 +83,9 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 .hang .key { display: inline-block; inline-size: var(--hang); text-indent: 0; }
 /* Questions: the question takes its own column, the answer is indented below it. */
 .qa > li { padding-inline-start: 1em; margin-block-end: var(--lh); }
+/* No empty column after the last item of a section. */
+.hang > li:last-child, .qa > li:last-child { margin-block-end: 0; }
+.pages > .spread:not(:last-child) .hang > li:last-child { margin-block-end: var(--lh); }
 .qa .key { display: block; margin-inline-start: -1em; }
 .note { padding: 12px 0; background: var(--shu-soft); border-top: 3px solid var(--shu); text-indent: 0; }
 .todo { background: #fde3dc; color: #8a2f1c; font-family: var(--sans); font-size: .82em; }
@@ -175,20 +178,12 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   footer { padding: 0 12px 32px; }
   .spread { width: 100%; min-width: 0; padding: 24px calc(var(--lh) / 2); margin-bottom: 28px; }
   [id] { scroll-margin-top: 96px; }  /* clear the sticky menu when a link jumps here */
-  .pages { writing-mode: horizontal-tb; display: flex; flex-direction: column; gap: 12px; width: auto; height: auto; padding: 0; margin-bottom: 28px;
-    overflow: visible; background: none; border: 0; box-shadow: none; }
-  .pages > .spread { display: block; margin: 0; }
-  /* One card per item, laid right to left and wrapping, instead of fixed pages. */
-  .cards { writing-mode: horizontal-tb; display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 12px; width: auto; height: auto; padding: 0;
-    overflow: visible; background: none; border: 0; box-shadow: none; }
-  .cards > ul { display: contents; }
-  .cards > h2, .cards > ul > li, .cards > p { writing-mode: vertical-rl; flex: 1 0 auto; height: var(--spread-h); margin: 0; padding: 24px calc(var(--lh) / 2);
-    line-height: var(--lh); background-color: var(--paper); border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2412;
-    background-image: repeating-linear-gradient(to left, transparent 0 calc(var(--lh) - 1px), var(--rule) calc(var(--lh) - 1px) var(--lh));
-    background-origin: content-box; background-clip: padding-box; }  /* rules run up to the label, still aligned to the columns */
-  .cards > ul > li { padding-top: calc(24px + var(--hang)); }
-  .cards > h2 { padding-top: 50px; }
-  .cards > h2::before { top: 28px; right: 26px; }
+  /* The pages of a section are tiers (dan) of one sheet: one outer border, a thin rule
+     between tiers, read top to bottom, each tier right to left. */
+  .pages { writing-mode: horizontal-tb; display: block; width: auto; height: auto; padding: 0; margin-bottom: 28px; overflow: visible; background: var(--paper); }
+  .pages > .spread { display: block; margin: 0; border: 0; box-shadow: none; }
+  .pages > .spread + .spread { border-top: 1px solid var(--rule); }
+  .pages > .spread:not(:last-child) .hang > li:last-child { margin-block-end: 0; }
   h2 { font-size: 22px; letter-spacing: .04em; }  /* 18 characters fit one column */
   .lead { font-size: 17px; }
   .plate { flex-direction: column; align-items: center; }
