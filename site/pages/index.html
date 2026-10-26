@@ -4,7 +4,6 @@
   <p class="lead">パソコン版Chromeブラウザで使える、四百字詰めの原稿用紙です。</p>
   <div class="buttons">
     <a class="button" aria-disabled="true">Chromeに追加（準備中）</a>
-    <a class="button quiet" href="#guide">使い方を見る</a>
   </div>
 </section>
 
@@ -25,29 +24,18 @@
   <figcaption>宮沢賢治『注文の多い料理店』（青空文庫）を開いたところです。</figcaption>
 </figure>
 
-<!-- Longer than one phone screen: written as pages, stacked on a phone and run on
-     as one spread on a wide screen. -->
-<div class="pages" id="guide">
-  <section class="spread">
-    <h2>使い方</h2>
-    <ul class="plain">
-      <li><b class="key">はじめに</b>　Chromeウェブストアから追加し、右上の原稿用紙のアイコンを押すと開きます。アイコンが見えないときは、パズルの形のボタンからピン留めしてください。</li>
-      <li><b class="key">原稿</b>　<span class="ui">＋ 新しい原稿</span>で原稿を増やし、<span class="ui">原稿を切り替える</span>で行き来します。書いたものは自動で保存されます。</li>
-      <li><b class="key">書体</b>　游明朝、BIZ UD明朝、UDデジタル教科書体、手書き風のクレー Oneやよもぎなど、七種類から選べます。</li>
-    </ul>
-  </section>
-  <section class="spread">
-    <ul class="plain">
-      <li><b class="key">ふりがな</b>　本文をなぞって選び、<span class="ui">ふりがなを付ける・直す</span>で読みを入れます。「京都」を「きょう｜と」と区切ると、一字ずつ付きます。</li>
-      <li><b class="key">保存</b>　続きを書くなら<span class="ui">JSON</span>（<kbd>Ctrl</kbd>＋<kbd>S</kbd>）、本文だけなら<span class="ui">TXT</span>、原稿用紙のまま残すなら<span class="ui">PDF</span>です。PDFは、印刷画面の送信先で「PDFに保存」を選びます。</li>
-      <li><b class="key">開く</b>　<span class="ui">ファイルを開く</span>から、JSON・TXT・Wordの文書を読み込めます。別のパソコンで続きを書くときも、JSONをここから開きます。</li>
-    </ul>
-  </section>
-  <section class="spread">
-    <ul class="plain spaced">
-      <li><b class="key">編集履歴</b>　およそ一時間ごとに自動で残ります。<span class="ui">編集履歴・復元</span>で日時を選び、<span class="ui">この日時に戻す</span>を押すと、その時点に戻ります。</li>
-      <li><b class="key">検索</b>　<span class="ui">検索</span>（<kbd>Ctrl</kbd>＋<kbd>F</kbd>）で原稿の中を探し、<span class="ui">一覧</span>で全ページを見渡せます。</li>
-    </ul>
-    <p class="small">禁則処理に対応。一原稿およそ四万字、原稿は二百件まで。</p>
-  </section>
-</div>
+<!-- On a phone each item becomes its own card (see .cards in style.css). -->
+<section class="spread cards" id="guide">
+  <h2>使い方</h2>
+  <ul class="plain hang">
+    <li><b class="key">はじめに</b>Chromeウェブストアから追加し、右上の原稿用紙のアイコンを押すと開きます。アイコンが見えないときは、パズルの形のボタンからピン留めしてください。</li>
+    <li><b class="key">原稿</b><span class="ui">＋ 新しい原稿</span>で原稿を増やし、<span class="ui">原稿を切り替える</span>で行き来します。書いたものは自動で保存されます。</li>
+    <li><b class="key">書体</b>游明朝、BIZ UD明朝、UDデジタル教科書体、手書き風のクレー Oneやよもぎなど、七種類から選べます。</li>
+    <li><b class="key">ふりがな</b>本文をなぞって選び、<span class="ui">ふりがなを付ける・直す</span>で読みを入れます。「京都」を「きょう｜と」と区切ると、一字ずつ付きます。</li>
+    <li><b class="key">保存</b>続きを書くなら<span class="ui">JSON</span>（<kbd>Ctrl</kbd>＋<kbd>S</kbd>）、本文だけなら<span class="ui">TXT</span>、原稿用紙のまま残すなら<span class="ui">PDF</span>です。PDFは、印刷画面の送信先で「PDFに保存」を選びます。</li>
+    <li><b class="key">開く</b><span class="ui">ファイルを開く</span>から、JSON・TXT・Wordの文書を読み込めます。別のパソコンで続きを書くときも、JSONをここから開きます。</li>
+    <li><b class="key">編集履歴</b>およそ一時間ごとに自動で残ります。<span class="ui">編集履歴・復元</span>で日時を選び、<span class="ui">この日時に戻す</span>を押すと、その時点に戻ります。</li>
+    <li><b class="key">検索</b><span class="ui">検索</span>（<kbd>Ctrl</kbd>＋<kbd>F</kbd>）で原稿の中を探し、<span class="ui">一覧</span>で全ページを見渡せます。</li>
+  </ul>
+  <p class="small">禁則処理に対応。一原稿およそ四万字、原稿は二百件まで。</p>
+</section>
