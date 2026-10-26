@@ -1,0 +1,2084 @@
+
+(() => {
+  try {
+  window.genkoBoot.stage('画面と描画機能の準備');
+  // Each review edition has its own sample storage. Never migrate real manuscripts here.
+  const CELL = 28, GAP = 12, CENTER_GAP = 16, ROWS = 20, COLS = 20, LIBRARY_KEY = 'tategaki-genko-chrome-library-v2';
+  const ATTACHED_MARK_CENTER = CELL - 3;
+  const FONT_OPTIONS = {
+  "mincho": {
+    "label": "游明朝",
+    "css": "\"Yu Mincho\", \"Hiragino Mincho ProN\", \"Noto Serif CJK JP\", serif",
+    "word": "Yu Mincho"
+  },
+  "gothic": {
+    "label": "游ゴシック",
+    "css": "\"Yu Gothic\", \"Hiragino Kaku Gothic ProN\", \"Noto Sans CJK JP\", sans-serif",
+    "word": "Yu Gothic"
+  },
+  "biz-mincho": {
+    "label": "BIZ UD明朝",
+    "css": "\"BIZ UDMincho Medium\", \"BIZ UDMincho\", \"Yu Mincho\", serif",
+    "word": "BIZ UDMincho Medium"
+  },
+  "kyokasho": {
+    "label": "UDデジタル教科書体",
+    "css": "\"UD Digi Kyokasho N\", \"Yu Mincho\", serif",
+    "word": "UD Digi Kyokasho N"
+  },
+  "shippori-b1": {
+    "label": "しっぽり明朝B1",
+    "css": "\"Shippori Mincho B1\", \"Yu Mincho\", serif",
+    "word": "Shippori Mincho B1"
+  },
+  "klee-one": {
+    "label": "クレー One",
+    "css": "\"Klee One\", \"Yu Mincho\", serif",
+    "word": "Klee One"
+  },
+  "yomogi": {
+    "label": "よもぎ",
+    "css": "\"Yomogi\", \"Yu Mincho\", serif",
+    "word": "Yomogi"
+  }
+};
+  const normalizeFont = value => Object.prototype.hasOwnProperty.call(FONT_OPTIONS, value) ? value : value === 'biz-gothic' ? 'gothic' : 'mincho';
+  function fontFromWordNames(names) {
+    if (!names.length || !names.every(name => name === names[0])) return 'mincho';
+    return Object.keys(FONT_OPTIONS).find(key => FONT_OPTIONS[key].word === names[0]) || (names[0] === 'BIZ UDGothic' ? 'gothic' : 'mincho');
+  }
+  let COMMA_FONT = '20px ' + FONT_OPTIONS.mincho.css;
+  const commaMeasureContext = document.createElement('canvas').getContext('2d');
+  const columnRight = column => column * (CELL + GAP) + (column >= COLS / 2 ? CENTER_GAP : 0);
+  const input = document.getElementById('input');
+  const pages = document.getElementById('pages');
+  const name = document.getElementById('name');
+  const fontSelect = document.getElementById('manuscript-font');
+  const main = document.getElementById('main');
+  const panelSide = document.getElementById('panel-side');
+  const projectSelect = document.getElementById('project-select');
+  const versionsSelect = document.getElementById('versions');
+  const countEl = document.getElementById('count');
+  const status = document.getElementById('status');
+  const overviewToggle = document.getElementById('overview-toggle');
+  const pageIndicator = document.getElementById('page-indicator');
+  const initialPixelRatio = window.devicePixelRatio || 1;
+  const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('ja', { granularity: 'grapheme' }) : null;
+  const opening = new Set([... '「『（〔［｛〈《【([{｢']);
+  const closing = new Set([... '」』）〕］｝〉》】)]}｣']);
+  const unbreakableMarks = new Set(['…', '⋯', '‥', '—', '―']);
+  const punctuation = new Set(['。', '、']);
+  const westernPunctuation = new Set(['.', ',']);
+  const verticalKana = new Set([...'ーｰぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ']);
+  const rotatedSymbols = new Set(['=', '＝', '-', '‐', '‑', '−', '－', '―', '—', '～', '〜', '<', '>', '＜', '＞']);
+  const verticalForm = new Map([
+    ['「', '﹁'], ['」', '﹂'], ['『', '﹃'], ['』', '﹄'],
+    ['（', '︵'], ['）', '︶'], ['〔', '︹'], ['〕', '︺'],
+    ['［', '﹇'], ['］', '﹈'], ['｛', '︷'], ['｝', '︸'],
+    ['〈', '︿'], ['〉', '﹀'], ['《', '︽'], ['》', '︾'],
+    ['【', '︻'], ['】', '︼'], ['、', '︑'], ['。', '︒'],
+    ['(', '︵'], [')', '︶'], ['[', '﹇'], [']', '﹈'],
+    ['{', '︷'], ['}', '︸'], ['｢', '﹁'], ['｣', '﹂']
+  ]);
+  let stops = [];
+  let findMatches = [], activeFindIndex = -1, findReturnFocus = null;
+  const findBar = document.getElementById('find-bar');
+  const findQuery = document.getElementById('find-query');
+  const findCount = document.getElementById('find-count');
+  let library;
+  // Filled at build time from scripts/manuscript-samples.cjs (data/literature).
+  const SAMPLE_CATALOG = /* build: SAMPLE_CATALOG */[];
+  // Unedited samples of earlier editions, recognised so they can be retired.
+  // Filled at build time from data/chrome/legacy-samples.json.
+  const LEGACY_SAMPLES = /* build: LEGACY_SAMPLES */[];
+  let sampleMigrationPending = false;
+  function sampleProject(example) {
+    const project = newProject(example.title, example.text);
+    project.rubies = example.rubies.map(item => ({ ...item }));
+    project.font = normalizeFont(example.font);
+    project.sampleId = example.sampleId; project.sampleProtected = true;
+    return project;
+  }
+  function isOriginalSample(project) {
+    return !!project?.sampleProtected && SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId);
+  }
+  function isProtectedProject(project) {
+    return isOriginalSample(project) || project?.protected === true;
+  }
+  // A protected original cannot be edited, so it follows the bundled readings.
+  // Drafts and edited copies keep their own readings.
+  function refreshOriginalSampleRubies(stored) {
+    for (const project of stored.projects) {
+      const source = project.sampleProtected && SAMPLE_CATALOG.find(sample => sample.sampleId === project.sampleId);
+      if (!source || project.text !== source.text || JSON.stringify(project.rubies) === JSON.stringify(source.rubies)) continue;
+      project.rubies = source.rubies.map(ruby => ({ ...ruby }));
+      sampleMigrationPending = true;
+    }
+    return stored;
+  }
+  function protectSampleLibrary(stored) {
+    if (stored.sampleProtectionVersion >= 1) return refreshOriginalSampleRubies(stored);
+    const originals = new Set();
+    for (const project of stored.projects) {
+      const source = SAMPLE_CATALOG.find(sample => sample.sampleId === project.sampleId);
+      if (!source) continue;
+      const same = project.title === source.title && project.text === source.text &&
+        JSON.stringify(project.rubies || []) === JSON.stringify(source.rubies);
+      if (same) project.sampleProtected = true;
+      else {
+        // An edited sample becomes an ordinary draft, never an overwritten original.
+        delete project.sampleId; delete project.sampleProtected;
+        originals.add(source.sampleId);
+      }
+      sampleMigrationPending = true;
+    }
+    for (const id of originals) {
+      if (stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.projects) continue;
+      const original = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
+      try { archiveBudget([...stored.projects, original]); } catch { continue; }
+      stored.projects.push(original);
+    }
+    stored.sampleProtectionVersion = 1;
+    return stored;
+  }
+  function updateSampleProtection() {
+    const project = activeProject(), original = isOriginalSample(project), locked = isProtectedProject(project);
+    input.readOnly = locked; name.readOnly = locked;
+    document.getElementById('sample-protection').hidden = !locked;
+    document.getElementById('sample-protection').textContent = original ? '見本の原文（保護中）' : '保護中';
+    document.getElementById('copy-sample').hidden = !locked;
+    document.getElementById('ruby-open').disabled = locked;
+    document.getElementById('restore-version').disabled = locked || !activeProject().history.length;
+    const button = document.getElementById('toggle-protection');
+    button.hidden = original;
+    button.textContent = locked ? '保護を解除' : '保護する';
+    button.setAttribute('aria-pressed', String(locked));
+    button.title = locked ? 'この原稿を編集できるようにします' : '本文・原稿名・ふりがなの編集を止めます';
+  }
+  function toggleProjectProtection() {
+    if (isOriginalSample(activeProject())) return;
+    save();
+    const project = activeProject();
+    project.protected = project.protected !== true;
+    updateSampleProtection(); refreshProjectOptions(); persist();
+  }
+  function createEditableCopy() {
+    const source = activeProject();
+    if (!isProtectedProject(source) || !canAddProjects(1)) return;
+    const copy = newProject(source.title + '（編集用）', source.text);
+    copy.font = source.font;
+    copy.rubies = source.rubies.map(ruby => ({ ...ruby }));
+    copy.history = copyHistory(source);
+    try { archiveBudget([...library.projects, copy]); }
+    catch (error) { operationProblem(error.message); return; }
+    library.projects.push(copy); library.activeId = copy.id;
+    showProject(); persist();
+    pages.children[pages.children.length - 1]?.scrollIntoView({ block: 'center' });
+    render();
+    input.focus({ preventScroll: true });
+  }
+  function prepareImportDraft() {
+    if (!isProtectedProject(activeProject())) return true;
+    if (!canAddProjects(1)) return false;
+    const project = newProject();
+    library.projects.push(project); library.activeId = project.id;
+    showProject();
+    return true;
+  }
+  function createSampleLibrary() {
+    const projects = SAMPLE_CATALOG.map(sampleProject);
+    return { version: 2, sampleCatalogVersion: 4, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'left', projects };
+  }
+  function unchangedLegacySample(project) {
+    if (project.history.length || project.driveLink || project.protected === true) return false;
+    return LEGACY_SAMPLES.some(example => project.title === example.title && project.text === example.text &&
+      normalizeFont(project.font) === normalizeFont(example.font) &&
+      JSON.stringify(project.rubies || []) === JSON.stringify(example.rubies || []));
+  }
+  function curateSampleLibrary(stored) {
+    if (stored.sampleCatalogVersion >= 4) return stored;
+    if (stored.sampleCatalogVersion >= 1) {
+      const previousCatalog = stored.sampleCatalogVersion;
+      stored.sampleCatalogVersion = 4;
+      // Append only the new work; never replace drafts or switch selection.
+      const retired = ['check-punctuation', 'check-ruby'];
+      if (!stored.projects.some(project => retired.includes(project.sampleId) || SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))) return stored;
+      stored.projects = stored.projects.filter(project => {
+        if (!retired.includes(project.sampleId)) return true;
+        if (unchangedLegacySample(project)) return false;
+        delete project.sampleId; delete project.sampleProtected;
+        return true;
+      });
+      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['check-layout', 4]]) {
+        if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.projects) continue;
+        const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
+        try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
+        stored.projects.push(candidate);
+        sampleMigrationPending = true;
+      }
+      stored.projects = orderStandardSamples(stored.projects);
+      if (!stored.projects.some(project => project.id === stored.activeId)) {
+        stored.activeId = (stored.projects.find(project => project.sampleId === 'check-layout') || stored.projects[0]).id;
+      }
+      sampleMigrationPending = true;
+      return stored;
+    }
+    // Legacy samples predate sampleId. Recognize their exact title AND complete
+    // content; a title-only match must never authorize removal of edited text.
+    if (!stored.projects.some(project => LEGACY_SAMPLES.some(example => project.title === example.title))) {
+      // Mark this in memory too, so an intentionally imported old sample is not
+      // mistaken for pre-update clutter at the following restart.
+      stored.sampleCatalogVersion = 4;
+      return stored;
+    }
+    const kept = stored.projects.filter(project => !unchangedLegacySample(project));
+    for (const example of SAMPLE_CATALOG) {
+      if (kept.some(project => project.sampleId === example.sampleId) || kept.length >= SAFETY.projects) continue;
+      const candidate = sampleProject(example);
+      try { archiveBudget([...kept, candidate]); }
+      catch { continue; } // User manuscripts and their histories take priority.
+      kept.push(candidate);
+    }
+    stored.projects = orderStandardSamples(kept);
+    stored.sampleCatalogVersion = 4;
+    if (!kept.some(project => project.id === stored.activeId)) stored.activeId = kept[0].id;
+    sampleMigrationPending = true;
+    return stored;
+  }
+  function orderStandardSamples(projects) {
+    return [...SAMPLE_CATALOG.flatMap(sample => projects.filter(project => project.sampleId === sample.sampleId)),
+      ...projects.filter(project => !SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))];
+  }
+
+  // These are provisional resource bounds, not manuscript formatting rules.
+  // See test-results/chrome-quality-02.md for the Node/DOM measurements.
+  const SAFETY = Object.freeze({ fileBytes: 10000000, textUnits: 40000, pages: 100,
+    projects: 200, history: 50, rubies: 2000, archiveUnits: 1000000 });
+  let originalStored = null, lastStored = null, storageProtected = false;
+  let unsavedChanges = false, libraryRevision = 0, readTicket = 0, pendingRead = null;
+  let composing = false, renderBlocked = false;
+  let boundedLayout = null;
+  const recoveryPanel = document.getElementById('recovery-panel');
+  const recoveryMessage = document.getElementById('recovery-message');
+  const operationStatus = document.getElementById('operation-status');
+  function operationProblem(message) {
+    operationStatus.textContent = message;
+    operationStatus.hidden = !message;
+    if (message) document.getElementById('file-status').textContent = '';
+  }
+  function storageProblem(message) {
+    unsavedChanges = true;
+    status.hidden = false;
+    status.textContent = message;
+    recoveryMessage.textContent = message;
+    recoveryPanel.hidden = false;
+    document.getElementById('recover-original').hidden = originalStored === null;
+  }
+  function textWithinBounds(text) {
+    if (typeof text !== 'string') throw Error('本文が文字列ではありません。');
+    if (text.length > SAFETY.textUnits) throw Error('本文が長すぎます。通常の日本語で約4万字までを目安に、原稿を分けてください。');
+    if (!boundedLayout || boundedLayout.text !== text) boundedLayout = { text, result: layout(text) };
+    if (boundedLayout.result.pageCount > SAFETY.pages) throw Error('改行・空行を含む紙面が100ページを超えます。原稿を分けてください。');
+  }
+  function archiveBudget(projects) {
+    if (!Array.isArray(projects) || !projects.length || projects.length > SAFETY.projects) throw Error('原稿数は1〜200件にしてください。');
+    let total = 0;
+    for (const project of projects) {
+      if (project?.protected !== undefined && typeof project.protected !== 'boolean') throw Error('保護設定のデータが不正です。');
+      if (!project || typeof project.title !== 'string' || typeof project.text !== 'string' ||
+          !Array.isArray(project.history) || project.history.length > SAFETY.history) throw Error('原稿または編集履歴のデータが不正です（履歴は50件まで）。');
+      for (const version of [project, ...project.history]) {
+        if (!version || typeof version.title !== 'string' || typeof version.text !== 'string') throw Error('編集履歴のデータが不正です。');
+        for (const key of ['font', 'kind', 'id']) if (version[key] != null && typeof version[key] !== 'string') throw Error('原稿の書体・ID・履歴名が不正です。');
+        for (const key of ['at', 'updatedAt', 'lastVersionAt']) if (version[key] != null &&
+            (typeof version[key] !== 'number' || !Number.isFinite(version[key]))) throw Error('原稿の日時データが不正です。');
+        if (version.title.length > 1000) throw Error('原稿名が長すぎます。');
+        total += version.title.length + version.text.length;
+        const rubies = version.rubies || [];
+        if (!Array.isArray(rubies) || rubies.length > SAFETY.rubies) throw Error('ふりがなの件数が多すぎるか、形式が不正です。');
+        for (const ruby of rubies) {
+          if (!ruby || typeof ruby.text !== 'string' || ruby.text.length > 200) throw Error('ふりがなのデータが大きすぎるか、形式が不正です。');
+          total += ruby.text.length;
+        }
+        if (total > SAFETY.archiveUnits) throw Error('本文・履歴の合計が大きすぎます。原稿を分けて読み込んでください。');
+      }
+    }
+  }
+  function validateArchiveProjects(projects, displayLimit = true) {
+    archiveBudget(projects);
+    // First count all input, then do the more expensive Unicode/layout work.
+    for (const project of projects) for (const version of [project, ...project.history]) {
+      if (displayLimit) textWithinBounds(version.text);
+      normalizeRubies(version.text, version.rubies || []);
+    }
+    const ids = projects.filter(p => typeof p.id === 'string' && p.id).map(p => p.id);
+    if (new Set(ids).size !== ids.length) throw Error('同じIDの原稿が重複しています。');
+    return projects;
+  }
+  function checkFileSize(file) {
+    if (!Number.isFinite(file.size) || file.size < 0 || file.size > SAFETY.fileBytes) throw Error('10MB以下のファイルを選んでください。');
+  }
+  function rubyBoundaries(text) {
+    if (text.length <= SAFETY.textUnits || !segmenter) return new Set([0, text.length, ...segments(text).map(part => part.offset)]);
+    const iterator = segmenter.segment(text);
+    return { has(offset) { return offset === text.length || iterator.containing(offset)?.index === offset; } };
+  }
+  function beginRead(file) {
+    checkFileSize(file);
+    return { ticket: ++readTicket, revision: libraryRevision };
+  }
+  function checkRead(read) {
+    if (read.ticket !== readTicket || read.revision !== libraryRevision) throw Error('読み込み中に原稿を編集・切替したか、別のファイルを選びました。現在の原稿を保護するため読み込みを中止しました。');
+  }
+  function canAddProjects(count) {
+    if (library.projects.length + count <= SAFETY.projects) return true;
+    operationProblem('原稿は200件までです。必要な原稿をJSONで保存してから、不要な原稿を削除してください。');
+    return false;
+  }
+  const wordCrcTable = Array.from({ length: 256 }, (_, n) => {
+    for (let bit = 0; bit < 8; bit++) n = n & 1 ? 0xedb88320 ^ n >>> 1 : n >>> 1;
+    return n >>> 0;
+  });
+  function verifyWordBytes(bytes, size, expectedCrc) {
+    if (bytes.length !== size) throw Error('Word本文の展開サイズが一致しません。');
+    let crc = 0xffffffff;
+    for (const byte of bytes) crc = wordCrcTable[(crc ^ byte) & 255] ^ crc >>> 8;
+    if (((crc ^ 0xffffffff) >>> 0) !== expectedCrc) throw Error('Word本文のチェックサムが一致しません。');
+    return bytes;
+  }
+  function protectOversizedRender(error) {
+    renderBlocked = true;
+    document.body.classList.add('plain-recovery');
+    pages.replaceChildren();
+    stops = [];
+    pageIndicator.textContent = '紙面表示を停止';
+    operationProblem(error.message + ' 入力内容は切り捨てていません。本文欄で分割するか、JSONで保存してください。');
+  }
+  window.addEventListener('beforeunload', event => {
+    if (unsavedChanges || composing && input.value !== activeProject()?.text) { event.preventDefault(); event.returnValue = ''; }
+  });
+  window.addEventListener('storage', event => {
+    if (event.key === LIBRARY_KEY && event.newValue !== lastStored) {
+      storageProtected = true;
+      storageProblem('別の原稿タブで保存先が変更されました。上書きを停止しています。このタブの原稿をJSONで保存してください。');
+    }
+  });
+  input.addEventListener('compositionstart', () => { composing = true; });
+  function finishComposition(event) { composing = false; save(event); }
+  input.addEventListener('compositionend', finishComposition);
+  input.addEventListener('blur', event => { if (composing) finishComposition(event); });
+  function manuscriptInput(event) {
+    if (event.isComposing) composing = true;
+    else if (composing && event.isComposing === false) composing = false;
+    save(event);
+  }
+  function guardInsertion(event, inserted) {
+    if (!event.cancelable || composing || event.isComposing || typeof inserted !== 'string') return;
+    const candidate = input.value.slice(0, input.selectionStart) + inserted + input.value.slice(input.selectionEnd);
+    try { textWithinBounds(candidate); }
+    catch (error) { event.preventDefault(); operationProblem(error.message + ' 現在の原稿は変更していません。'); }
+  }
+  input.addEventListener('beforeinput', event => {
+    if (event.inputType?.startsWith('insert')) guardInsertion(event, event.data ?? (event.inputType === 'insertLineBreak' ? '\n' : null));
+  });
+  input.addEventListener('paste', event => guardInsertion(event, event.clipboardData?.getData('text/plain')));
+  document.getElementById('recover-current').addEventListener('click', () => {
+    try { saveBackup(); }
+    catch (error) { operationProblem('JSON保存を開始できませんでした。' + error.message); }
+  });
+  document.getElementById('recover-all').addEventListener('click', () => {
+    try { saveLibraryBackup(); }
+    catch (error) { operationProblem('全原稿のJSON保存を開始できませんでした。' + error.message); }
+  });
+  document.getElementById('recover-original').addEventListener('click', () => {
+    if (originalStored === null) return;
+    try { downloadBlob(new Blob([originalStored], { type: 'application/json;charset=utf-8' }), '保存先の元データ_' + backupStamp() + '.json'); }
+    catch (error) { operationProblem('元データの保存を開始できませんでした。' + error.message); }
+  });
+  document.getElementById('retry-storage').addEventListener('click', () => {
+    if (storageProtected) {
+      try {
+        const now = localStorage.getItem(LIBRARY_KEY);
+        if (now !== originalStored) throw Error('保存先が別のタブで変わっています。このタブをJSON保存してから、原稿タブを開き直してください。');
+        if (originalStored !== null) downloadBlob(new Blob([originalStored], { type: 'application/json;charset=utf-8' }), '保存先の元データ_' + backupStamp() + '.json');
+        saveLibraryBackup();
+        if (!confirm('元データと現在の全原稿のJSONを、実際にファイルへ保存できたことを確認してください。保存済みなら「OK」で、ブラウザ内の保存先を現在の原稿に置き換えて記録を再開します。')) return;
+        lastStored = now; storageProtected = false;
+        persist();
+      } catch (error) { operationProblem('記録を再開できませんでした。' + error.message); }
+    } else persist();
+  });
+
+  let overviewMode = false, returnScrollY = 0;
+  // VIEWPORT_LAYOUT_20_START: all sizes here are CSS pixels, without DPR compensation.
+  function sheetViewportSize(width, height, panelHidden, paperClientWidth = 0) {
+    const stacked = width <= 650;
+    const panel = panelHidden || stacked ? 0 : 266;
+    const innerWidth = paperClientWidth > 0 ? paperClientWidth - 24 : width - 24 - panel - 26;
+    const availableWidth = Math.max(1, innerWidth - 2);
+    const availableHeight = Math.max(1, height - 52);
+    return { scale: Math.max(.001, Math.min(2, availableWidth / 884, availableHeight / 630)), availableWidth };
+  }
+  // VIEWPORT_LAYOUT_20_END
+  function fitPaper() {
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    const height = document.documentElement.clientHeight || window.innerHeight;
+    const paper = document.getElementById('paper-scroll');
+    const { scale } = sheetViewportSize(width, height, library?.panelHidden, paper?.clientWidth || 0);
+    document.documentElement.style.setProperty('--paper-scale', String(scale));
+    document.documentElement.style.setProperty('--paper-height', (630 * scale + 26) + 'px');
+  }
+
+  function updatePageIndicator() {
+    if (!pages.children.length) return;
+    if (!overviewMode) {
+      let closest = Infinity;
+      for (let i = 0; i < pages.children.length; i++) {
+        const rect = pages.children[i].getBoundingClientRect();
+        const distance = Math.abs((rect.top + rect.bottom) / 2 - window.innerHeight / 2);
+        if (distance < closest) { closest = distance; visiblePage = i; }
+      }
+    }
+    pageIndicator.textContent = `${visiblePage + 1} / ${pages.children.length}`;
+  }
+  let visiblePage = 0, indicatorQueued = false;
+  function updateOverviewLayout() {
+    if (!overviewMode) return;
+    const n = Math.max(1, pages.children.length), gap = 12;
+    const width = Math.max(1, (document.documentElement.clientWidth || window.innerWidth) - 48), height = Math.max(1, window.innerHeight - 89);
+    let bestColumns = 1, bestScale = 0;
+    for (let columns = 1; columns <= n; columns++) {
+      const rows = Math.ceil(n / columns);
+      const scale = Math.min(1, (width - (columns - 1) * gap) / (columns * 884),
+        (height - (rows - 1) * gap) / (rows * 640));
+      if (scale > bestScale) { bestScale = scale; bestColumns = columns; }
+    }
+    document.documentElement.style.setProperty('--overview-cols', String(bestColumns));
+    document.documentElement.style.setProperty('--overview-scale', String(Math.max(0.01, bestScale * .96)));
+  }
+  function setOverview(show, targetPage = null) {
+    if (show === overviewMode) return;
+    if (show) returnScrollY = window.scrollY;
+    overviewMode = show;
+    if (show) input.blur();
+    document.body.classList.toggle('overview-mode', show);
+    for (const button of [overviewToggle]) {
+      button.textContent = show ? '戻る' : '一覧';
+      button.title = show ? '通常表示へ戻る（Esc）' : '全ページを一覧表示';
+      button.setAttribute('aria-label', button.title);
+    }
+    if (show) updateOverviewLayout();
+    else {
+      render();
+      requestAnimationFrame(() => {
+        if (targetPage === null) window.scrollTo(0, returnScrollY);
+        else pages.children[targetPage]?.scrollIntoView({ block: 'center' });
+      });
+    }
+  }
+  const segments = value => segmenter ? [...segmenter.segment(value)].map(x => ({ text: x.segment, offset: x.index })) : [...value].map((text, i) => ({ text, offset: i }));
+  // RUBY_MODEL_START: UTF-16 offsets match textarea selection and DOCX text.
+  function normalizeRubies(text, items = []) {
+    if (!Array.isArray(items)) throw new Error('ルビのデータが不正です。');
+    if (items.length > SAFETY.rubies || items.some(item => typeof item?.text !== 'string' || item.text.length > 200) ||
+        items.reduce((sum, item) => sum + item.text.length, 0) > SAFETY.textUnits) throw Error('ふりがなのデータ量が上限を超えます。原稿を分けてください。');
+    if (!items.length) return [];
+    const boundaries = rubyBoundaries(text);
+    const result = items.map(item => {
+      if (!item || !Number.isInteger(item.start) || !Number.isInteger(item.end) ||
+          item.start < 0 || item.end <= item.start || item.end > text.length ||
+          !boundaries.has(item.start) || !boundaries.has(item.end) ||
+          typeof item.text !== 'string' || !item.text.trim() || /[\r\n]/u.test(item.text) ||
+          /[\r\n]/u.test(text.slice(item.start, item.end)) ||
+          segments(text.slice(item.start, item.end)).length > ROWS) throw new Error('ルビの範囲・読みが不正です。');
+      return { start: item.start, end: item.end, text: item.text.trim() };
+    }).sort((a, b) => a.start - b.start);
+    if (result.some((item, i) => i > 0 && result[i - 1].end > item.start)) throw new Error('ルビの範囲が重複しています。');
+    return result;
+  }
+  function rebaseRubies(before, after, rubies) {
+    if (before === after) return normalizeRubies(after, rubies);
+    let start = 0, oldEnd = before.length, newEnd = after.length;
+    while (start < oldEnd && start < newEnd && before[start] === after[start]) start++;
+    while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
+    const delta = newEnd - oldEnd;
+    const afterBoundaries = rubyBoundaries(after);
+    return normalizeRubies(after, rubies.flatMap(item => {
+      if (item.end <= start) return [{ ...item }];
+      if (item.start >= oldEnd) return [{ ...item, start: item.start + delta, end: item.end + delta }];
+      return []; // Editing the base removes its reading rather than assigning it to different text.
+    }).filter(item => afterBoundaries.has(item.start) && afterBoundaries.has(item.end)));
+  }
+  // RUBY_MODEL_END
+  function layout(value) {
+    let page = 0, column = 0, row = 0, wrapped = false;
+    const glyphs = [];
+    const positions = [{ offset: 0, page, column, row }];
+    const nextColumn = automatic => { column++; row = 0; wrapped = automatic; if (column === COLS) { page++; column = 0; } };
+    const moveBeforeGlyph = () => {
+      nextColumn(false);
+      Object.assign(positions[positions.length - 1], { page, column, row });
+    };
+    let lastCell = null, previous = '';
+    const parts = segments(value);
+    // Count each run once, rather than repeatedly scanning a long run ahead.
+    const runLengths = new Array(parts.length).fill(1);
+    for (let i = parts.length - 2; i >= 0; i--) {
+      if (unbreakableMarks.has(parts[i].text) && parts[i].text === parts[i + 1].text) {
+        runLengths[i] = runLengths[i + 1] + 1;
+      }
+    }
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const char = part.text;
+      if (char === '\n' || char === '\r\n') {
+        if (!wrapped) nextColumn(false);
+        wrapped = false;
+        lastCell = null;
+      } else {
+        const westernMark = westernPunctuation.has(char) && /^[A-Za-z]$/u.test(previous);
+        // Each closing bracket keeps its own cell. Reserve the preceding base
+        // with a following bracket run instead of squeezing them into one cell.
+        if (!closing.has(char)) {
+          const followingIndex = i + 1;
+          const punctuationCell = punctuation.has(parts[followingIndex]?.text) ? 1 : 0;
+          let trailing = 0;
+          while (closing.has(parts[followingIndex + punctuationCell + trailing]?.text)) trailing++;
+          const needed = 1 + punctuationCell + trailing - (punctuationCell && trailing === 1 ? 1 : 0);
+          const punctuationPair = punctuation.has(char) && trailing === 1;
+          if (trailing > 1 && !punctuationPair && row > 0 && needed <= ROWS && needed > ROWS - row) moveBeforeGlyph();
+        }
+        if (unbreakableMarks.has(char) && char !== previous && row > 0 && runLengths[i] > ROWS - row) {
+          moveBeforeGlyph();
+        }
+        if (row === ROWS - 1 && opening.has(char)) moveBeforeGlyph();
+        const shareWithPrevious = closing.has(char) && punctuation.has(previous) && lastCell && !closing.has(parts[i + 1]?.text);
+        const avoidLineHead = row === 0 && wrapped && lastCell && (punctuation.has(char) || westernMark || closing.has(char) && !closing.has(parts[i + 1]?.text));
+        if (shareWithPrevious || avoidLineHead) {
+          const cornerAttached = !!(avoidLineHead && (closing.has(char) || punctuation.has(char) && closing.has(parts[i + 1]?.text) && !closing.has(parts[i + 2]?.text)) || closing.has(char) && glyphs.at(-1)?.cornerAttached);
+          glyphs.push({ text: char, ...lastCell, attached: true, westernMark, start: part.offset, end: part.offset + char.length, ...(cornerAttached ? { cornerAttached: true } : {}) });
+        } else {
+          lastCell = { page, column, row };
+          glyphs.push({ text: char, ...lastCell, attached: false, westernMark, start: part.offset, end: part.offset + char.length });
+          wrapped = false;
+          row++;
+          if (row === ROWS) nextColumn(true);
+        }
+      }
+      previous = char;
+      positions.push({ offset: part.offset + part.text.length, page, column, row });
+    }
+    // A cursor just after the last cell does not require an empty manuscript page.
+    // Explicit line breaks still retain their intended blank columns/pages.
+    const pageCount = Math.max(1, page + 1 - (wrapped && column === 0 ? 1 : 0));
+    for (const position of positions) {
+      if (position.page >= pageCount) {
+        Object.assign(position, { page: pageCount - 1, column: COLS - 1, row: ROWS });
+      }
+    }
+    return { glyphs, positions, pageCount };
+  }
+  // Ruby annotates the established body layout; it must never move body cells.
+  // A separator is an explicit user-supplied reading boundary, never guessed.
+  function readingAnnotations(selection, reading) {
+    const parts = String(reading).split(/[|｜]/u).map(part => part.trim());
+    if (parts.length === 1) return normalizeRubies(selection.base, [{ start: 0, end: selection.base.length, text: parts[0] }])
+      .map(item => ({ ...item, start: item.start + selection.start, end: item.end + selection.start }));
+    const bases = segments(selection.base);
+    if (parts.length !== bases.length || parts.some(part => !part)) throw new Error('文字ごとに読みを指定してください。例：京都 → きょう｜と（2文字に2つの読み）');
+    return normalizeRubies(selection.base, bases.map((base, i) => ({ start: base.offset, end: base.offset + base.text.length, text: parts[i] })))
+      .map(item => ({ ...item, start: item.start + selection.start, end: item.end + selection.start }));
+  }
+  function readingForSelection(selection, annotations) {
+    if (!annotations.length || annotations[0].start !== selection.start || annotations.at(-1).end !== selection.end) return '';
+    if (annotations.some((item, i) => i > 0 && annotations[i - 1].end !== item.start)) return '';
+    if (annotations.length === 1) return annotations[0].text;
+    if (annotations.every(item => segments(selection.base.slice(item.start - selection.start, item.end - selection.start)).length === 1)) {
+      return annotations.map(item => item.text).join('｜');
+    }
+    return ''; // Don't silently erase mixed group/character annotation boundaries.
+  }
+  function buildRubyRuns(value, rubies, glyphs) {
+    const indexByStart = new Map(glyphs.map((glyph, index) => [glyph.start, index]));
+    const runs = [];
+    for (const ruby of rubies) {
+      const start = indexByStart.get(ruby.start);
+      if (start === undefined) continue;
+      const bases = [];
+      for (let i = start; i < glyphs.length && glyphs[i].start < ruby.end; i++) bases.push(glyphs[i]);
+      if (!bases.length) continue;
+      const first = bases[0], last = bases.at(-1);
+      const needsSplit = first.page !== last.page || first.column !== last.column;
+      const letters = segments(ruby.text);
+      const height = needsSplit ? CELL : (last.row - first.row + 1) * CELL;
+      runs.push({ page: first.page, column: first.column, row: first.row, height,
+        text: ruby.text, size: Math.min(10, height / letters.length),
+        baseStart: first.start, baseEnd: last.end, rubyStart: ruby.start, needsSplit,
+        base: value.slice(ruby.start, ruby.end) });
+    }
+    return runs;
+  }
+
+  function centerAttachedComma(comma) {
+    comma.setAttribute('x', '0');
+    comma.setAttribute('y', '0');
+    if (commaMeasureContext) {
+      commaMeasureContext.font = COMMA_FONT;
+      const metrics = alternateInk(comma, parseFloat(COMMA_FONT)) || commaMeasureContext.measureText(comma.textContent);
+      if (metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight > 0 &&
+          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent > 0) {
+        comma.setAttribute('x', String(ATTACHED_MARK_CENTER + (metrics.actualBoundingBoxLeft - metrics.actualBoundingBoxRight) / 2));
+        comma.setAttribute('y', String(ATTACHED_MARK_CENTER + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2));
+        return;
+      }
+    }
+    const bounds = comma.getBBox();
+    if (!bounds.width || !bounds.height) return;
+    comma.setAttribute('x', String(ATTACHED_MARK_CENTER - bounds.x - bounds.width / 2));
+    comma.setAttribute('y', String(ATTACHED_MARK_CENTER - bounds.y - bounds.height / 2));
+  }
+  function centerAllAttachedCommas() {
+    for (const comma of pages.querySelectorAll('.comma-text')) centerAttachedComma(comma);
+  }
+  // Some families (BIZ UDMincho, UD Digi Kyokasho, Yomogi) have no U+FE10-FE4F
+  // code points, only 'vert' alternates of the ordinary characters. Chrome
+  // applies 'vert' only in vertical writing mode, so those marks are drawn
+  // vertically: an ordinary cell like the small kana, a shared cell as vertical
+  // SVG text placed by the same ink-based insets from this font-file table.
+  // Vertical-layout ink boxes per em (left, right from the centre line; top,
+  // bottom below the vertical origin), from scripts/measure-vertical-alternates.py.
+  const VERTICAL_ALTERNATES = /* build: VERTICAL_ALTERNATES */{};
+  const verticalAlternateFamilies = new Map();
+  function ownFamilyRendered(font) {
+    // A missing family falls back to Yu Mincho; then keep the old code points.
+    if (!verticalAlternateFamilies.has(font)) {
+      let rendered = false;
+      try {
+        const ink = css => {
+          commaMeasureContext.font = '20px ' + css;
+          const m = commaMeasureContext.measureText('永あ');
+          return [m.actualBoundingBoxLeft, m.actualBoundingBoxRight, m.actualBoundingBoxAscent, m.actualBoundingBoxDescent].join();
+        };
+        rendered = !!commaMeasureContext && ink(FONT_OPTIONS[font].css) !== ink('"Yu Mincho", serif');
+      } catch { rendered = false; }
+      verticalAlternateFamilies.set(font, rendered);
+    }
+    return verticalAlternateFamilies.get(font);
+  }
+  function setVerticalMark(element, form) {
+    const font = normalizeFont(activeProject()?.font), own = VERTICAL_ALTERNATES[font];
+    const char = own && [...verticalForm].find(([key, value]) => value === form && own[key])?.[0];
+    if (!char || !ownFamilyRendered(font)) element.textContent = form;
+    else if (element.namespaceURI === 'http://www.w3.org/2000/svg') {
+      element.textContent = char;
+      element.classList.add('vertical-alternate');
+      element.dataset.inkEm = own[char].join(' ');
+    } else {
+      const upright = document.createElement('span');
+      upright.className = 'vertical-japanese';
+      upright.textContent = char;
+      element.textContent = '';
+      element.classList.add('vertical-alternate');
+      element.append(upright);
+    }
+    return element;
+  }
+  function alternateInk(element, size) {
+    if (!element.dataset.inkEm) return null;
+    // As canvas metrics around the text position, which in vertical SVG text
+    // is the glyph's vertical origin on its centre line.
+    const [left, right, top, bottom] = element.dataset.inkEm.split(' ').map(value => Number(value) * size);
+    return { actualBoundingBoxLeft: -left, actualBoundingBoxRight: right, actualBoundingBoxAscent: -top, actualBoundingBoxDescent: bottom };
+  }
+  function makeSharedCellText(value, { x, y, width, height, size = 20, rotate = false }) {
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.classList.add('shared-cell-text');
+    setVerticalMark(text, value);
+    Object.assign(text.dataset, { centerX: x, centerY: y, maxWidth: width, maxHeight: height, fontSize: size, rotate });
+    text.style.fill = 'var(--ink)'; text.style.stroke = 'none';
+    return text;
+  }
+  function positionAllSharedCellText() {
+    const family = FONT_OPTIONS[normalizeFont(activeProject()?.font)].css;
+    for (const text of pages.querySelectorAll('.shared-cell-text')) {
+      const x = Number(text.dataset.centerX), y = Number(text.dataset.centerY);
+      const maxWidth = Number(text.dataset.maxWidth), maxHeight = Number(text.dataset.maxHeight);
+      const rotate = text.dataset.rotate === 'true';
+      let size = Number(text.dataset.fontSize), metrics;
+      // Fit by font size only. Never squeeze a bracket along one axis.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        text.style.font = `${size}px ${family}`;
+        if (commaMeasureContext) {
+          commaMeasureContext.font = text.style.font;
+          metrics = alternateInk(text, size) || commaMeasureContext.measureText(text.textContent);
+        } else {
+          const box = text.getBBox();
+          metrics = { actualBoundingBoxLeft: -box.x, actualBoundingBoxRight: box.x + box.width,
+            actualBoundingBoxAscent: -box.y, actualBoundingBoxDescent: box.y + box.height };
+        }
+        const inkWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight;
+        const inkHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+        const ratio = Math.min(1, maxWidth / ((rotate ? inkHeight : inkWidth) || 1),
+          maxHeight / ((rotate ? inkWidth : inkHeight) || 1));
+        if (ratio >= 1 || attempt === 2) break;
+        size *= ratio * .98;
+      }
+      const fittedInkHeight = rotate ? metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight
+        : metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+      const centerY = text.dataset.topInset !== undefined ? Number(text.dataset.topInset) + fittedInkHeight / 2
+        : text.dataset.bottomInset === undefined ? y : CELL - Number(text.dataset.bottomInset) - fittedInkHeight / 2;
+      const fittedInkWidth = rotate ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+        : metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight;
+      const centerX = text.dataset.rightInset === undefined ? x : CELL - Number(text.dataset.rightInset) - fittedInkWidth / 2;
+      text.setAttribute('x', String(centerX + (metrics.actualBoundingBoxLeft - metrics.actualBoundingBoxRight) / 2));
+      text.setAttribute('y', String(centerY + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2));
+      if (rotate) text.setAttribute('transform', `rotate(90 ${centerX} ${centerY})`);
+      else text.removeAttribute('transform');
+    }
+  }
+  function centerWesternMark(mark) {
+    const target = mark.closest('svg').dataset.attached === 'true' ? ATTACHED_MARK_CENTER : null;
+    const x = target ?? 23, y = target ?? 6;
+    mark.setAttribute('x', '0');
+    mark.setAttribute('y', '0');
+    if (commaMeasureContext) {
+      commaMeasureContext.font = COMMA_FONT;
+      const metrics = commaMeasureContext.measureText(mark.textContent);
+      if (metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight > 0 &&
+          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent > 0) {
+        mark.setAttribute('x', String(x + (metrics.actualBoundingBoxLeft - metrics.actualBoundingBoxRight) / 2));
+        mark.setAttribute('y', String(y + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2));
+        return;
+      }
+    }
+    const bounds = mark.getBBox();
+    if (!bounds.width || !bounds.height) return;
+    mark.setAttribute('x', String(x - bounds.x - bounds.width / 2));
+    mark.setAttribute('y', String(y - bounds.y - bounds.height / 2));
+  }
+  function centerAllWesternMarks() {
+    for (const mark of pages.querySelectorAll('.western-mark-text')) centerWesternMark(mark);
+  }
+  function searchRanges(value, query) {
+    if (!query) return [];
+    const matches = [];
+    let from = 0, at;
+    while ((at = value.indexOf(query, from)) !== -1) {
+      matches.push({ start: at, end: at + query.length });
+      from = at + query.length;
+    }
+    return matches;
+  }
+  function refreshFindMatches() {
+    const previousStart = findMatches[activeFindIndex]?.start;
+    findMatches = findBar.hidden ? [] : searchRanges(input.value, findQuery.value);
+    if (!findMatches.length) activeFindIndex = -1;
+    else if (previousStart === undefined) activeFindIndex = 0;
+    else {
+      const same = findMatches.findIndex(match => match.start === previousStart);
+      activeFindIndex = same === -1 ? 0 : same;
+    }
+    findCount.textContent = findMatches.length ? `${activeFindIndex + 1} / ${findMatches.length}` : '0 / 0';
+  }
+  function render() {
+    try { textWithinBounds(input.value); }
+    catch (error) { protectOversizedRender(error); return; }
+    if (renderBlocked) { renderBlocked = false; document.body.classList.remove('plain-recovery'); operationProblem(''); }
+    const selectedFont = FONT_OPTIONS[normalizeFont(activeProject()?.font)];
+    pages.style.setProperty('--manuscript-font', selectedFont.css);
+    COMMA_FONT = '20px ' + selectedFont.css;
+    document.title = name.value.trim() || '縦書き原稿';
+    const currentRubies = composing ? rebaseRubies(activeProject().text, input.value, activeProject().rubies || []) : normalizeRubies(input.value, activeProject()?.rubies || []);
+    const result = boundedLayout.result;
+    stops = result.positions;
+    refreshFindMatches();
+    const fragment = document.createDocumentFragment();
+    const sheets = [];
+    for (let i = 0; i < result.pageCount; i++) {
+      const page = document.createElement('div');
+      page.className = 'page';
+      const sheet = document.createElement('div');
+      sheet.className = 'sheet';
+      sheet.dataset.page = String(i);
+      for (let column = 0; column < COLS; column++) {
+        const rule = document.createElement('div');
+        rule.className = 'column-rule';
+        rule.style.right = columnRight(column) + 'px';
+        sheet.append(rule);
+      }
+      const footer = document.createElement('div');
+      footer.className = 'page-footer';
+      const dimensions = document.createElement('span');
+      dimensions.textContent = '20×20';
+      const number = document.createElement('span');
+      number.textContent = String(i + 1);
+      footer.append(dimensions, number);
+      page.append(sheet, footer);
+      fragment.append(page);
+      sheets.push(sheet);
+    }
+    const selectionStart = input.selectionStart, selectionEnd = input.selectionEnd;
+    if (selectionStart !== selectionEnd) {
+      const seen = new Set();
+      for (const item of result.glyphs) {
+        if (item.start >= selectionEnd || item.end <= selectionStart) continue;
+        const key = `${item.page}:${item.column}:${item.row}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const highlight = document.createElement('span');
+        highlight.className = 'selection-cell';
+        highlight.style.right = columnRight(item.column) + 'px';
+        highlight.style.top = (item.row * CELL) + 'px';
+        sheets[item.page].append(highlight);
+      }
+    }
+    if (findMatches.length) {
+      const foundCells = new Map();
+      let matchIndex = 0;
+      for (const item of result.glyphs) {
+        while (matchIndex < findMatches.length && findMatches[matchIndex].end <= item.start) matchIndex++;
+        for (let i = matchIndex; i < findMatches.length && findMatches[i].start < item.end; i++) {
+          if (findMatches[i].end <= item.start) continue;
+          const key = `${item.page}:${item.column}:${item.row}`;
+          const active = i === activeFindIndex;
+          if (!foundCells.has(key) || active) foundCells.set(key, { item, active });
+        }
+      }
+      for (const { item, active } of foundCells.values()) {
+        const highlight = document.createElement('span');
+        highlight.className = active ? 'find-cell find-active' : 'find-cell';
+        highlight.style.right = columnRight(item.column) + 'px';
+        highlight.style.top = (item.row * CELL) + 'px';
+        sheets[item.page].append(highlight);
+      }
+    }
+    const sharedBodyCells = new Set(result.glyphs
+      .filter(item => !item.attached && !punctuation.has(item.text) && !closing.has(item.text))
+      .map(item => `${item.page}:${item.column}:${item.row}`));
+    for (const item of result.glyphs) {
+      // One renderer and one set of sizes for shared marks at every row.
+      // The body character always keeps its ordinary renderer and position.
+      if (item.attached && (punctuation.has(item.text) || closing.has(item.text))) {
+        // A punctuation-only final cell is still an ordinary cell. Only marks
+        // forced into a body character's cell need the line-end placement.
+        const sharesBody = item.attached && sharedBodyCells.has(`${item.page}:${item.column}:${item.row}`);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('attached-mark');
+        if (item.cornerAttached) svg.classList.add('corner-mark');
+        svg.setAttribute('viewBox', '0 0 28 28');
+        svg.style.right = columnRight(item.column) + 'px';
+        svg.style.top = (item.row * CELL) + 'px';
+        if (item.text === '。') {
+          // Use the same font glyph as an ordinary punctuation cell. A drawn
+          // circle with an independent stroke makes this period look heavier.
+          const period = makeSharedCellText(verticalForm.get(item.text) || item.text, {
+            x: ATTACHED_MARK_CENTER, y: ATTACHED_MARK_CENTER, width: CELL, height: CELL, size: 20
+          });
+          period.classList.add('shared-period-text');
+          period.dataset.rightInset = 1;
+          if (sharesBody) period.dataset.bottomInset = 1;
+          else period.dataset.topInset = 1;
+          svg.append(period);
+        } else if (item.text === '、') {
+          const comma = document.createElementNS(svg.namespaceURI, 'text');
+          comma.classList.add('comma-text');
+          comma.style.font = COMMA_FONT;
+          setVerticalMark(comma, verticalForm.get('、'));
+          svg.append(comma);
+        } else {
+          const bracket = makeSharedCellText(verticalForm.get(item.text) || item.text, {
+            x: 8, y: 8, width: 14, height: 14, size: 20
+          });
+          bracket.classList.add('attached-bracket-text');
+          // A key sharing a period's cell stays at the top left, including the
+          // final row. A key with its own cell keeps the font's ordinary glyph.
+          if (sharesBody) bracket.dataset.bottomInset = 1;
+          svg.append(bracket);
+        }
+        sheets[item.page].append(svg);
+        continue;
+      }
+      if (item.westernMark) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('attached-mark');
+        svg.setAttribute('viewBox', '0 0 28 28');
+        svg.dataset.attached = String(item.attached);
+        svg.style.right = columnRight(item.column) + 'px';
+        svg.style.top = (item.row * CELL) + 'px';
+        const mark = document.createElementNS(svg.namespaceURI, 'text');
+        mark.classList.add('western-mark-text');
+        mark.style.font = COMMA_FONT;
+        mark.textContent = item.text;
+        svg.append(mark);
+        sheets[item.page].append(svg);
+        continue;
+      }
+      const glyph = document.createElement('span');
+      glyph.className = 'glyph';
+      if (punctuation.has(item.text)) glyph.classList.add('punctuation');
+      if (opening.has(item.text) || closing.has(item.text)) glyph.classList.add('bracket');
+      if (item.attached) glyph.classList.add('attached');
+      if (item.text === '…' || item.text === '⋯') {
+        const dots = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        dots.classList.add('vertical-ellipsis');
+        dots.setAttribute('viewBox', '0 0 28 28');
+        dots.setAttribute('aria-hidden', 'true');
+        for (const y of [7, 14, 21]) {
+          const dot = document.createElementNS(dots.namespaceURI, 'circle');
+          dot.setAttribute('cx', '14'); dot.setAttribute('cy', String(y)); dot.setAttribute('r', '1.5');
+          dots.append(dot);
+        }
+        glyph.append(dots);
+      } else if (verticalKana.has(item.text) || rotatedSymbols.has(item.text)) {
+        const stroke = document.createElement('span');
+        stroke.className = verticalKana.has(item.text) ? 'vertical-japanese' : 'rotated-symbol';
+        stroke.textContent = item.text === 'ｰ' ? 'ー' : item.text;
+        glyph.append(stroke);
+      } else setVerticalMark(glyph, verticalForm.get(item.text) || item.text);
+      if (item.attached) {
+        glyph.style.width = (CELL / 2) + 'px';
+        glyph.style.height = (CELL / 2) + 'px';
+        glyph.style.right = (columnRight(item.column) + CELL / 2) + 'px';
+        glyph.style.top = (item.row * CELL + CELL / 2) + 'px';
+      } else {
+        glyph.style.right = columnRight(item.column) + 'px';
+        glyph.style.top = (item.row * CELL) + 'px';
+      }
+      sheets[item.page].append(glyph);
+    }
+    const rubyRuns = buildRubyRuns(input.value, currentRubies, result.glyphs);
+    const unresolved = rubyRuns.filter(ruby => ruby.needsSplit);
+    const rubyStatus = document.getElementById('ruby-status');
+    if (unresolved.length) {
+      rubyStatus.dataset.splitWarning = 'true';
+      rubyStatus.textContent = unresolved.slice(0, 3).map(ruby => '「' + ruby.base + '」（' + ruby.text + '）').join('、') +
+        (unresolved.length > 3 ? ' ほか' : '') + 'は列をまたぎます。本文を選び、文字ごとの読みを「きょう｜と」のように指定してください。※の位置の読みは未表示です。';
+    } else if (rubyStatus.dataset.splitWarning === 'true') {
+      delete rubyStatus.dataset.splitWarning;
+      rubyStatus.textContent = '本文を選択して、ふりがなを変更できます。';
+    }
+    for (const ruby of rubyRuns) {
+      if (ruby.needsSplit) {
+        const marker = document.createElement('span');
+        marker.className = 'ruby-run ruby-warning';
+        marker.textContent = '※';
+        marker.title = ruby.base + '（' + ruby.text + '）：読みの区切りを指定してください';
+        marker.style.right = (columnRight(ruby.column) - 11) + 'px';
+        marker.style.top = (ruby.row * CELL) + 'px';
+        sheets[ruby.page].append(marker);
+        continue;
+      }
+      const run = document.createElement('span');
+      run.className = 'ruby-run';
+      run.setAttribute('aria-label', ruby.text);
+      run.style.right = (columnRight(ruby.column) - 11) + 'px';
+      run.style.top = (ruby.row * CELL) + 'px';
+      run.style.height = ruby.height + 'px';
+      const letters = segments(ruby.text);
+      letters.forEach((letter, i) => {
+        const span = document.createElement('span');
+        span.className = 'ruby-letter';
+        span.textContent = letter.text;
+        span.style.fontSize = ruby.size + 'px';
+        span.style.height = ruby.size + 'px';
+        span.style.top = ((i + .5) * ruby.height / letters.length - ruby.size / 2) + 'px';
+        run.append(span);
+      });
+      sheets[ruby.page].append(run);
+    }
+    const offset = input.selectionDirection === 'backward' ? selectionStart : selectionEnd;
+    let at = stops[0];
+    for (const stop of stops) { if (stop.offset > offset) break; at = stop; }
+    const caret = document.createElement('span');
+    caret.className = 'cursor';
+    caret.style.right = (columnRight(at.column) + 3) + 'px';
+    caret.style.top = (at.row * CELL + 1) + 'px';
+    if (document.activeElement === input && selectionStart === selectionEnd) sheets[at.page].append(caret);
+    pages.replaceChildren(fragment);
+    centerAllAttachedCommas();
+    positionAllSharedCellText();
+    centerAllWesternMarks();
+    updateOverviewLayout();
+    updatePageIndicator();
+    const sheetRect = sheets[at.page].getBoundingClientRect();
+    const displayScale = sheetRect.width / 804;
+    if (!composing) {
+      // Windows IME opens its candidate list below the caret, its frame starting
+      // left of it by a fixed amount at any paper scale. At +32 px the frame still
+      // hid the column's right rule in the user's screen; +36 leaves it visible.
+      // The list then covers columns already written, not the text being composed.
+      input.style.left = (sheetRect.right - columnRight(at.column) * displayScale + 36) + 'px';
+      input.style.top = (sheetRect.top + at.row * CELL * displayScale) + 'px';
+    }
+    countEl.textContent = segments(input.value).filter(part => !/^\s+$/u.test(part.text)).length.toLocaleString('ja-JP');
+  }
+  const newId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  const newProject = (title = '', text = '') => ({ id: newId(), title, text, font: 'mincho', rubies: [], history: [], updatedAt: Date.now(), lastVersionAt: text ? 0 : Date.now() });
+  const activeProject = () => library.projects.find(project => project.id === library.activeId);
+  function addVersion(project, kind) {
+    if (!project.text && !project.title) return;
+    project.history.push({ id: newId(), at: Date.now(), kind, title: project.title, text: project.text, font: normalizeFont(project.font), rubies: normalizeRubies(project.text, project.rubies || []) });
+    if (project.history.length > 50) project.history.splice(0, project.history.length - 50);
+    project.lastVersionAt = Date.now();
+  }
+  function refreshProjectOptions() {
+    projectSelect.replaceChildren(...library.projects.map(project => {
+      const option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = (project.title.trim() || '無題') + (isOriginalSample(project) ? '（原文）' : isProtectedProject(project) ? '（保護中）' : '');
+      return option;
+    }));
+    projectSelect.value = library.activeId;
+  }
+  function refreshVersions() {
+    const history = activeProject().history;
+    document.getElementById('restore-version').disabled = isProtectedProject(activeProject()) || !history.length;
+    if (!history.length) {
+      versionsSelect.replaceChildren(new Option('まだ履歴はありません', ''));
+      return;
+    }
+    versionsSelect.replaceChildren(...[...history].reverse().map(version =>
+      new Option(new Date(version.at).toLocaleString('ja-JP') + ' · ' + (version.kind === '復元前' ? '戻す前の原稿' : version.kind), version.id)));
+  }
+  function persist() {
+    libraryRevision++;
+    library.panelSide = panelSide.value;
+    try {
+      if (storageProtected) throw Error('元の保存先の保護中');
+      if (localStorage.getItem(LIBRARY_KEY) !== lastStored) {
+        storageProtected = true; throw Error('別のタブで保存先が変更されました');
+      }
+      archiveBudget(library.projects);
+      const serialized = JSON.stringify(library);
+      localStorage.setItem(LIBRARY_KEY, serialized);
+      lastStored = serialized;
+      unsavedChanges = false;
+      status.hidden = true; status.textContent = ''; recoveryPanel.hidden = true;
+    } catch (error) {
+      storageProblem(storageProtected
+        ? '元の保存先を保護するため上書きを停止しています。このタブの原稿をJSONで保存してください。'
+        : 'ブラウザ内に記録できていません。画面の原稿は保持しています。閉じる前にJSONで保存してください。 ' + error.message);
+    }
+    refreshDriveStatus();
+  }
+  const rubyUndoStates = new Map();
+  function save(event) {
+    if (isProtectedProject(activeProject())) {
+      composing = false; input.value = activeProject().text; name.value = activeProject().title; persist(); render(); return;
+    }
+    if (composing && !event) composing = false;
+    if (composing) { render(); return; }
+    const project = activeProject();
+    if (project) {
+      const changedText = project.text !== input.value;
+      if (changedText && project.text && Date.now() - project.lastVersionAt >= 60 * 60 * 1000) {
+        addVersion(project, '自動');
+        refreshVersions();
+      }
+      const changedTitle = project.title !== name.value;
+      if (changedText) {
+        const cache = rubyUndoStates.get(project.id) || new Map();
+        cache.set(project.text, normalizeRubies(project.text, project.rubies || []));
+        const oldCount = (project.rubies || []).length;
+        project.rubies = /^history(Undo|Redo)$/u.test(event?.inputType || '') && cache.has(input.value)
+          ? normalizeRubies(input.value, cache.get(input.value))
+          : rebaseRubies(project.text, input.value, project.rubies || []);
+        if (project.rubies.length < oldCount) document.getElementById('ruby-status').textContent = '本文を変更した範囲のふりがなを外しました。';
+        while (cache.size > 50) cache.delete(cache.keys().next().value);
+        rubyUndoStates.set(project.id, cache);
+      }
+      project.title = name.value;
+      project.text = input.value;
+      project.updatedAt = Date.now();
+      if (changedTitle) refreshProjectOptions();
+      persist();
+    }
+    if (!composing) render();
+  }
+  function showProject() {
+    const project = activeProject();
+    document.getElementById('file-status').textContent = '';
+    document.getElementById('ruby-status').textContent = '';
+    delete document.getElementById('ruby-status').dataset.splitWarning;
+    name.value = project.title;
+    fontSelect.value = normalizeFont(project.font);
+    input.value = project.text;
+    if (project.text !== input.value) {
+      project.rubies = rebaseRubies(project.text, input.value, project.rubies || []);
+      project.text = input.value;
+    }
+    input.setSelectionRange(input.value.length, input.value.length);
+    refreshProjectOptions();
+    refreshVersions();
+    updateSampleProtection();
+    render();
+    refreshDriveStatus();
+  }
+  function loadLibrary() {
+    try {
+      originalStored = localStorage.getItem(LIBRARY_KEY);
+      lastStored = originalStored;
+      if (originalStored !== null) {
+        if (originalStored.length > SAFETY.fileBytes) throw Error('保存データが大きすぎます');
+        const stored = JSON.parse(originalStored);
+        if (!stored || ![1, 2].includes(stored.version)) throw Error('保存形式が不正です');
+        validateArchiveProjects(stored.projects, false);
+        if (stored.projects.some(p => typeof p.id !== 'string' || !p.id)) throw Error('保存IDが不正です');
+        for (const project of stored.projects) {
+          project.font = normalizeFont(project.font);
+          project.rubies = normalizeRubies(project.text, project.rubies || []);
+          for (const version of project.history) {
+            version.font = normalizeFont(version.font);
+            version.rubies = normalizeRubies(version.text, version.rubies || []);
+          }
+        }
+        if (!stored.projects.some(p => p.id === stored.activeId)) stored.activeId = stored.projects[0].id;
+        stored.version = 2; return protectSampleLibrary(curateSampleLibrary(stored));
+      }
+    } catch (error) {
+      storageProtected = true;
+      storageProblem('保存データを読み込めませんでした。元の保存先は上書きしません。' + error.message + ' 現在の原稿と、取得できた元データをJSONで保存してください。');
+    }
+    return createSampleLibrary();
+  }
+  function offsetAtPoint(x, y) {
+    const element = document.elementFromPoint(x, y);
+    const sheet = element && element.closest('.sheet');
+    if (!sheet) return null;
+    const box = sheet.getBoundingClientRect();
+    const displayScale = box.width / 804;
+    const fromRight = (box.right - x) / displayScale;
+    let column = 0;
+    for (let i = 1; i < COLS; i++) {
+      if (Math.abs(fromRight - columnRight(i) - CELL / 2) < Math.abs(fromRight - columnRight(column) - CELL / 2)) column = i;
+    }
+    const localY = (y - box.top) / displayScale;
+    const row = Math.max(0, Math.min(ROWS - 1, Math.floor(localY / CELL)));
+    const lowerHalf = localY % CELL >= CELL / 2;
+    const target = Number(sheet.dataset.page) * COLS * ROWS + column * ROWS + row + (lowerHalf ? .75 : 0);
+    let closest = stops[0], distance = Infinity;
+    for (const stop of stops) {
+      const ordinal = stop.page * COLS * ROWS + stop.column * ROWS + stop.row;
+      const gap = Math.abs(ordinal - target);
+      if (gap < distance) { distance = gap; closest = stop; }
+    }
+    return closest.offset;
+  }
+  window.genkoBoot.stage('操作ボタンの準備');
+  let dragAnchor = null;
+  pages.addEventListener('mousedown', event => {
+    if (event.button !== 0) return;
+    if (overviewMode) {
+      const page = event.target.closest('.page');
+      if (page) {
+        event.preventDefault();
+        setOverview(false, [...pages.children].indexOf(page));
+      }
+      return;
+    }
+    const offset = offsetAtPoint(event.clientX, event.clientY);
+    if (offset === null) return;
+    event.preventDefault();
+    const anchor = event.shiftKey ? (input.selectionDirection === 'backward' ? input.selectionEnd : input.selectionStart) : offset;
+    dragAnchor = anchor;
+    input.style.left = event.clientX + 'px';
+    input.style.top = event.clientY + 'px';
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(Math.min(anchor, offset), Math.max(anchor, offset), offset < anchor ? 'backward' : 'forward');
+    render();
+  });
+  document.addEventListener('mousemove', event => {
+    if (dragAnchor === null) return;
+    const offset = offsetAtPoint(event.clientX, event.clientY);
+    if (offset === null) return;
+    input.setSelectionRange(Math.min(dragAnchor, offset), Math.max(dragAnchor, offset),
+      offset < dragAnchor ? 'backward' : 'forward');
+    render();
+  });
+  document.addEventListener('mouseup', () => { dragAnchor = null; });
+  input.addEventListener('input', manuscriptInput);
+  input.addEventListener('keydown', event => {
+    if (renderBlocked) return;
+    if (composing || event.isComposing || event.keyCode === 229 || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const forward = event.key === 'ArrowDown' || event.key === 'ArrowLeft';
+    const focus = input.selectionStart === input.selectionEnd ? input.selectionStart
+      : input.selectionDirection === 'backward' ? input.selectionStart : input.selectionEnd;
+    let index = 0;
+    while (index + 1 < stops.length && stops[index + 1].offset <= focus) index++;
+    const here = stops[index];
+    let target = here;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      let next = index + step;
+      while (next >= 0 && next < stops.length &&
+        stops[next].page === here.page && stops[next].column === here.column && stops[next].row === here.row) next += step;
+      const candidate = stops[next];
+      if (candidate) target = candidate;
+    } else {
+      let page = here.page;
+      let column = here.column + (event.key === 'ArrowLeft' ? 1 : -1);
+      if (column === COLS) { page++; column = 0; }
+      if (column < 0) { page--; column = COLS - 1; }
+      const candidates = stops.filter(stop => stop.page === page && stop.column === column);
+      if (candidates.length) target = candidates.reduce((best, stop) =>
+        Math.abs(stop.row - here.row) < Math.abs(best.row - here.row) ? stop : best);
+    }
+    if (event.shiftKey) {
+      const anchor = input.selectionStart === input.selectionEnd ? focus
+        : input.selectionDirection === 'backward' ? input.selectionEnd : input.selectionStart;
+      input.setSelectionRange(Math.min(anchor, target.offset), Math.max(anchor, target.offset),
+        target.offset < anchor ? 'backward' : 'forward');
+    } else if (input.selectionStart !== input.selectionEnd) {
+      const edge = forward ? input.selectionEnd : input.selectionStart;
+      input.setSelectionRange(edge, edge);
+    } else input.setSelectionRange(target.offset, target.offset);
+    render();
+  });
+  input.addEventListener('keyup', render);
+  input.addEventListener('click', render);
+  input.addEventListener('blur', render);
+  document.addEventListener('mousedown', event => {
+    if (!event.target.closest('.sheet') && event.target !== input) input.blur();
+  });
+  name.addEventListener('input', save);
+  fontSelect.addEventListener('change', () => {
+    save();
+    const project = activeProject(), selected = normalizeFont(fontSelect.value);
+    if (normalizeFont(project.font) === selected) return;
+    addVersion(project, 'フォント変更前');
+    project.font = selected; project.updatedAt = Date.now();
+    driveMessage = null;
+    persist(); refreshVersions(); render();
+  });
+  const rubyDialog = document.getElementById('ruby-dialog');
+  const rubyReading = document.getElementById('ruby-reading');
+  let pendingRubySelection = null;
+  function openRubyEditor() {
+    if (isProtectedProject(activeProject())) return;
+    save();
+    const existing = activeProject().rubies || [];
+    let start = input.selectionStart, end = input.selectionEnd;
+    const atCaret = existing.find(item => item.start <= start && item.end > start);
+    if (start === end && atCaret) { start = atCaret.start; end = atCaret.end; }
+    const base = input.value.slice(start, end);
+    if (!base) { document.getElementById('ruby-status').textContent = '読みを付ける本文をドラッグで選択してください。'; input.focus({ preventScroll: true }); return; }
+    if (/[\r\n]/u.test(base) || segments(base).length > ROWS) {
+      document.getElementById('ruby-status').textContent = '改行を含まない20字以内の範囲を選択してください。'; return;
+    }
+    const overlaps = existing.filter(item => item.start < end && item.end > start);
+    pendingRubySelection = { start, end, base };
+    document.getElementById('ruby-base').textContent = base;
+    rubyReading.value = readingForSelection(pendingRubySelection, overlaps);
+    document.getElementById('ruby-apply').textContent = rubyReading.value ? '変更する' : '付ける';
+    document.getElementById('ruby-remove').disabled = overlaps.length === 0;
+    document.getElementById('ruby-error').textContent = '';
+    rubyDialog.showModal(); rubyReading.focus();
+  }
+  document.getElementById('ruby-open').addEventListener('mousedown', event => event.preventDefault());
+  document.getElementById('ruby-open').addEventListener('click', openRubyEditor);
+  function commitRuby(remove = false) {
+    if (isProtectedProject(activeProject())) return;
+    const selection = pendingRubySelection;
+    if (!selection || input.value.slice(selection.start, selection.end) !== selection.base) return;
+    const project = activeProject();
+    try {
+      const next = (project.rubies || []).filter(item => item.end <= selection.start || item.start >= selection.end);
+      if (!remove) next.push(...readingAnnotations(selection, rubyReading.value));
+      const normalized = normalizeRubies(project.text, next);
+      addVersion(project, remove ? 'ルビ削除前' : 'ルビ変更前');
+      project.rubies = normalized;
+      project.updatedAt = Date.now();
+      persist(); refreshVersions(); rubyDialog.close();
+      input.focus({ preventScroll: true }); input.setSelectionRange(selection.start, selection.end); render();
+      if (document.getElementById('ruby-status').dataset.splitWarning !== 'true') document.getElementById('ruby-status').textContent = remove ? 'ふりがなを外しました。' : 'ふりがなを反映しました。';
+    } catch (error) { document.getElementById('ruby-error').textContent = error.message; }
+  }
+  document.getElementById('ruby-form').addEventListener('submit', event => { event.preventDefault(); commitRuby(); });
+  document.getElementById('ruby-remove').addEventListener('click', () => commitRuby(true));
+  document.getElementById('ruby-cancel').addEventListener('click', () => rubyDialog.close());
+  function openStandardSample(sampleId) {
+    save();
+    let project = library.projects.find(item => item.sampleId === sampleId);
+    if (!project) {
+      if (!canAddProjects(1)) return;
+      project = sampleProject(SAMPLE_CATALOG.find(item => item.sampleId === sampleId));
+      library.projects.push(project);
+    }
+    library.activeId = project.id;
+    persist(); showProject(); window.scrollTo(0, 0);
+  }
+  document.getElementById('ruby-sample').addEventListener('click', () => openStandardSample('check-layout'));
+  document.getElementById('literature-sample').addEventListener('click', () => openStandardSample('aozora-92'));
+  document.getElementById('chumon-sample').addEventListener('click', () => openStandardSample('aozora-43754'));
+  function applyPanelSide() {
+    const onRight = panelSide.value === 'right';
+    main.classList.toggle('panel-right', onRight);
+    document.body.classList.toggle('panel-on-right', onRight);
+  }
+  document.getElementById('flip-panel').addEventListener('click', () => {
+    panelSide.value = panelSide.value === 'left' ? 'right' : 'left';
+    applyPanelSide();
+    save();
+  });
+  document.getElementById('hide-panel').addEventListener('click', () => {
+    library.panelHidden = true;
+    document.body.classList.add('panel-hidden');
+    fitPaper();
+    persist();
+    render();
+  });
+  document.getElementById('show-panel').addEventListener('click', () => {
+    library.panelHidden = false;
+    document.body.classList.remove('panel-hidden');
+    fitPaper();
+    persist();
+    render();
+  });
+  overviewToggle.addEventListener('click', () => setOverview(!overviewMode));
+  function jumpToPage(index) {
+    if (overviewMode) setOverview(false, index);
+    else pages.children[index]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  document.getElementById('first-page').addEventListener('click', () => jumpToPage(0));
+  document.getElementById('last-page').addEventListener('click', () => jumpToPage(pages.children.length - 1));
+  function scrollToFindMatch() {
+    const match = pages.querySelector('.find-active');
+    const page = match?.closest('.page');
+    if (page) showFindPage([...pages.children].indexOf(page));
+  }
+  let findPageIndex = 0;
+  function positionFindBar() {
+    if (findBar.hidden) return;
+    const page = pages.children[Math.min(findPageIndex, pages.children.length - 1)];
+    if (!page) return;
+    const box = page.getBoundingClientRect(), scale = box.width / 884;
+    const controlScale = Math.min(1, scale);
+    const rightSide = document.body.classList.contains('panel-on-right');
+    findBar.style.left = (rightSide ? box.right - 40 * scale - 250 * controlScale : box.left + 40 * scale) + 'px';
+    findBar.style.right = 'auto';
+    findBar.style.top = box.top + 3 * scale + 'px';
+    findBar.style.transform = 'scale(' + controlScale + ')';
+  }
+  function showFindPage(index) {
+    findPageIndex = Math.max(0, Math.min(index, pages.children.length - 1));
+    pages.children[findPageIndex]?.scrollIntoView({ block: 'start' });
+    positionFindBar();
+  }
+  window.addEventListener('resize', positionFindBar);
+  window.addEventListener('scroll', positionFindBar, { passive: true });
+  for (const id of ['flip-panel', 'hide-panel', 'show-panel']) {
+    document.getElementById(id).addEventListener('click', () => requestAnimationFrame(positionFindBar));
+  }
+  function openFind() {
+    if (findBar.hidden) findReturnFocus = document.activeElement;
+    if (overviewMode) setOverview(false);
+    const visiblePage = [...pages.children].findIndex(page => page.getBoundingClientRect().bottom > 0);
+    findBar.hidden = false;
+    render();
+    showFindPage(Math.max(0, visiblePage));
+    findQuery.focus({ preventScroll: true });
+    findQuery.select();
+  }
+  function closeFind() {
+    findBar.hidden = true;
+    findQuery.value = '';
+    if (findReturnFocus?.isConnected) findReturnFocus.focus({ preventScroll: true });
+    findReturnFocus = null;
+    render();
+  }
+  function moveFind(direction) {
+    if (!findMatches.length) return;
+    activeFindIndex = (activeFindIndex + direction + findMatches.length) % findMatches.length;
+    render();
+    scrollToFindMatch();
+  }
+  document.getElementById('find-open').addEventListener('click', openFind);
+  document.getElementById('find-close').addEventListener('click', closeFind);
+  document.getElementById('find-prev').addEventListener('click', () => moveFind(-1));
+  document.getElementById('find-next').addEventListener('click', () => moveFind(1));
+  findQuery.addEventListener('input', () => {
+    activeFindIndex = -1;
+    render();
+    scrollToFindMatch();
+  });
+  findQuery.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.isComposing) return;
+    event.preventDefault();
+    moveFind(event.shiftKey ? -1 : 1);
+  });
+  window.addEventListener('scroll', () => {
+    if (indicatorQueued) return;
+    indicatorQueued = true;
+    requestAnimationFrame(() => { indicatorQueued = false; updatePageIndicator(); });
+  }, { passive: true });
+  window.addEventListener('resize', () => { fitPaper(); render(); });
+  const printPages = document.getElementById('print-pages');
+  function buildPrintPages() {
+    printPages.style.setProperty('--manuscript-font', FONT_OPTIONS[normalizeFont(activeProject().font)].css);
+    printPages.replaceChildren(...[...pages.children].map(page => {
+      const frame = document.createElement('div');
+      frame.className = 'print-page';
+      frame.append(page.cloneNode(true));
+      return frame;
+    }));
+  }
+  let printRequestPending = false;
+  function requestManuscriptPrint() {
+    if (printRequestPending) return;
+    printRequestPending = true;
+    const start = () => {
+      try {
+        if (renderBlocked) throw Error('紙面表示が停止しているため印刷できません。');
+        if (overviewMode) setOverview(false);
+        centerAllAttachedCommas(); positionAllSharedCellText(); centerAllWesternMarks();
+        buildPrintPages();
+        window.print();
+      } catch (error) { operationProblem('印刷を開始できませんでした。' + error.message); }
+      finally { printRequestPending = false; }
+    };
+    if (document.fonts?.ready) document.fonts.ready.then(start, () => { printRequestPending = false; operationProblem('書体を読み込めませんでした。'); });
+    else start();
+  }
+  window.addEventListener('afterprint', () => printPages.replaceChildren());
+  window.addEventListener('beforeprint', () => { if (overviewMode) setOverview(false); centerAllAttachedCommas(); positionAllSharedCellText(); centerAllWesternMarks(); });
+  window.addEventListener('beforeprint', buildPrintPages);
+  projectSelect.addEventListener('change', () => {
+    library.activeId = projectSelect.value;
+    showProject();
+    persist();
+  });
+  document.getElementById('new-project').addEventListener('click', () => {
+    if (!canAddProjects(1)) return;
+    const project = newProject();
+    library.projects.push(project);
+    library.activeId = project.id;
+    showProject();
+    persist();
+    name.focus();
+  });
+  const deleteDialog = document.getElementById('delete-dialog');
+  let deleteTargetId = null;
+  document.getElementById('delete-project').addEventListener('click', () => {
+    save();
+    const project = activeProject();
+    deleteTargetId = project.id;
+    document.getElementById('delete-project-name').textContent = '「' + (project.title.trim() || '無題') + '」';
+    deleteDialog.showModal();
+    document.getElementById('cancel-delete').focus({ preventScroll: true });
+  });
+  document.getElementById('cancel-delete').addEventListener('click', () => {
+    deleteTargetId = null;
+    deleteDialog.close();
+  });
+  deleteDialog.addEventListener('cancel', () => { deleteTargetId = null; });
+  deleteDialog.addEventListener('close', () => { deleteTargetId = null; });
+  document.getElementById('confirm-delete').addEventListener('click', () => {
+    if (!deleteDialog.open || !deleteTargetId) return;
+    const index = library.projects.findIndex(project => project.id === deleteTargetId);
+    if (index < 0) { deleteTargetId = null; deleteDialog.close(); return; }
+    const wasActive = library.activeId === deleteTargetId;
+    library.projects.splice(index, 1);
+    if (!library.projects.length) library.projects.push(newProject());
+    if (wasActive) library.activeId = library.projects[Math.min(index, library.projects.length - 1)].id;
+    deleteTargetId = null;
+    deleteDialog.close();
+    showProject();
+    persist();
+  });
+  document.getElementById('checkpoint').addEventListener('click', () => {
+    save();
+    addVersion(activeProject(), '手動');
+    persist();
+    refreshVersions();
+  });
+  document.getElementById('toggle-protection').addEventListener('click', toggleProjectProtection);
+  document.getElementById('copy-sample').addEventListener('click', createEditableCopy);
+  document.getElementById('restore-version').addEventListener('click', () => {
+    if (isProtectedProject(activeProject())) return;
+    const project = activeProject();
+    const version = project.history.find(item => item.id === versionsSelect.value);
+    if (!version) return;
+    addVersion(project, '復元前');
+    project.title = version.title;
+    project.text = version.text;
+    project.font = normalizeFont(version.font);
+    project.rubies = normalizeRubies(version.text, version.rubies || []);
+    project.updatedAt = Date.now();
+    showProject();
+    persist();
+  });
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const backupStamp = () => {
+    const date = new Date();
+    const two = n => String(n).padStart(2, '0');
+    return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) +
+      '_' + two(date.getHours()) + '-' + two(date.getMinutes()) + '-' + two(date.getSeconds());
+  };
+  function saveBackup() {
+    save();
+    const project = activeProject();
+    const data = { format: 'tategaki-manuscript', version: 2, savedAt: Date.now(), recovery: 'plain-text', project: manuscriptSnapshot(project) };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    downloadBlob(blob, safeFilename(project.title.trim() || '無題') + '_' + backupStamp() + '.json');
+    return true;
+  }
+  function saveLibraryBackup() {
+    save();
+    const data = { ...library, recovery: 'plain-text', projects: library.projects.map(manuscriptSnapshot) };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    downloadBlob(blob, '全原稿_' + backupStamp() + '.json');
+    document.getElementById('file-status').textContent = '全原稿のJSON保存を開始しました。';
+  }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      if (composing || event.isComposing || event.keyCode === 229 || document.querySelector('dialog[open]')) return;
+      if (overviewMode) { event.preventDefault(); setOverview(false); return; }
+    }
+    if ((event.ctrlKey || event.metaKey) && ['s', 'f'].includes(event.key.toLowerCase()) && document.querySelector('dialog[open]')) {
+      event.preventDefault(); return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+      event.preventDefault();
+      openFind();
+    } else if (event.key === 'Escape' && !findBar.hidden) {
+      event.preventDefault();
+      closeFind();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      saveSelectedFile();
+    }
+  });
+  function parseArchive(data) {
+    const single = data && (data.format === 'tategaki-manuscript' && [1, 2].includes(data.version) || data.format === 'tategaki-drive-manuscript' && data.version === 2);
+    if (single) return validateArchiveProjects([data.project], data.recovery !== 'plain-text');
+    if (data && [1, 2].includes(data.version)) return validateArchiveProjects(data.projects, data.recovery !== 'plain-text');
+    throw Error('このアプリの原稿JSONではありません。');
+  }
+  function copyHistory(source) {
+    return source.history.filter(v => v && typeof v.title === 'string' && typeof v.text === 'string')
+      .slice(-50).map(v => ({ id: newId(), at: Number(v.at) || Date.now(), kind: String(v.kind || '以前の版'), title: v.title, text: v.text, font: normalizeFont(v.font), rubies: normalizeRubies(v.text, v.rubies || []) }));
+  }
+  function restoreProject(source, allowOversize = false) {
+    validateArchiveProjects([source], !allowOversize);
+    if (!library.projects.some(p => p.id === source.id) && !canAddProjects(1)) return;
+    save();
+    const current = activeProject();
+    let project = library.projects.find(p => typeof source.id === 'string' && p.id === source.id);
+    if (isProtectedProject(project)) project = null;
+    if (!project && !canAddProjects(1)) return;
+    if (project && (project.title !== source.title || project.text !== source.text || normalizeFont(project.font) !== normalizeFont(source.font) || JSON.stringify(project.rubies || []) !== JSON.stringify(source.rubies || []))) {
+      if (!confirm(`同じ原稿「${project.title.trim() || '無題'}」があります。JSONの内容を開きますか？ 現在の版は編集履歴に残します。`)) return;
+      addVersion(project, '読込前');
+    }
+    if (!project) {
+      if (!isProtectedProject(current) && !current.title && !current.text && !current.history.length) project = current;
+      else { project = newProject(); library.projects.push(project); }
+      if (typeof source.id === 'string' && source.id && !library.projects.some(p => p !== project && p.id === source.id)) project.id = source.id;
+    }
+    const oldHistory = project.history;
+    project.title = source.title;
+    project.text = source.text;
+    project.font = normalizeFont(source.font);
+    project.rubies = normalizeRubies(source.text, source.rubies || []);
+    const mergedHistory = new Map([...copyHistory(source), ...oldHistory].map(v => [JSON.stringify([v.at, v.title, v.text, normalizeFont(v.font), v.rubies || [], v.kind]), v]));
+    project.history = [...mergedHistory.values()].sort((a, b) => a.at - b.at).slice(-50);
+    project.updatedAt = Date.now();
+    project.lastVersionAt = Date.now();
+    if (source.protected === true) project.protected = true; else delete project.protected;
+    library.activeId = project.id;
+    showProject();
+    persist();
+    document.getElementById('file-status').textContent = '原稿（JSON）を開きました。';
+    window.scrollTo(0, 0);
+  }
+  let pendingSources = [];
+  const jsonPicker = document.getElementById('json-picker');
+  const jsonSelect = document.getElementById('json-project-select');
+  async function openJsonFile(file) {
+    try {
+      const read = beginRead(file);
+      const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
+      checkRead(read);
+      const sources = parseArchive(data);
+      read.allowOversize = data.recovery === 'plain-text';
+      if (sources.length === 1) {
+        jsonPicker.hidden = true;
+        restoreProject(sources[0], read.allowOversize);
+        pendingSources = []; pendingRead = null;
+      } else {
+        pendingSources = sources; pendingRead = read;
+        jsonSelect.replaceChildren(new Option('開く原稿を選んでください', ''), ...sources.map((p, i) => new Option(p.title.trim() || '無題', String(i))));
+        jsonSelect.value = '';
+        jsonPicker.hidden = false;
+      }
+    } catch (error) { operationProblem('原稿を開けませんでした。' + error.message); }
+  }
+  document.getElementById('import-backup').addEventListener('change', event => {
+    const file = event.target.files[0]; event.target.value = '';
+    if (file) return openJsonFile(file);
+  });
+  document.getElementById('open-json-project').addEventListener('click', () => {
+    if (jsonSelect.value === '') { jsonSelect.focus(); return; }
+    try { checkRead(pendingRead); }
+    catch (error) { operationProblem(error.message); return; }
+    const source = pendingSources[Number(jsonSelect.value)];
+    if (!source) return;
+    restoreProject(source, pendingRead.allowOversize);
+    pendingSources = [];
+    jsonPicker.hidden = true;
+  });
+  document.getElementById('cancel-json-project').addEventListener('click', () => {
+    pendingSources = [];
+    jsonPicker.hidden = true;
+  });
+  function downloadTitle() {
+    const title = name.value.trim();
+    if (!title) { alert('原稿名を入力してください。'); name.focus(); return null; }
+    return title;
+  }
+  const safeFilename = title => title.replace(/[\\/:*?"<>|]/g, '_');
+  const xmlEscape = value => value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  function wordDocument(body, rubies = [], font = 'mincho') {
+    const plain = body.replace(/\r\n?/g, '\n');
+    const annotations = rebaseRubies(body, plain, rubies);
+    const family = FONT_OPTIONS[normalizeFont(font)].word;
+    const run = (value, size = 24) => '<w:r><w:rPr><w:rFonts w:eastAsia="' + family + '" w:ascii="' + family + '" w:hAnsi="' + family + '"/>' +
+      '<w:sz w:val="' + size + '"/><w:szCs w:val="' + size + '"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r>';
+    const ruby = (base, reading) => '<w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="distributeSpace"/>' +
+      '<w:hps w:val="12"/><w:hpsRaise w:val="24"/><w:hpsBaseText w:val="24"/><w:lid w:val="ja-JP"/>' +
+      '</w:rubyPr><w:rt>' + run(reading, 12) + '</w:rt><w:rubyBase>' + run(base) + '</w:rubyBase></w:ruby></w:r>';
+    let offset = 0, annotationIndex = 0;
+    const content = plain.split('\n').map(line => {
+      let cursor = 0, xml = '';
+      while (annotations[annotationIndex] && annotations[annotationIndex].start < offset + line.length) {
+        const item = annotations[annotationIndex++];
+        xml += run(line.slice(cursor, item.start - offset));
+        xml += ruby(plain.slice(item.start, item.end), item.text);
+        cursor = item.end - offset;
+      }
+      xml += run(line.slice(cursor)); offset += line.length + 1;
+      return '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>' + xml + '</w:p>';
+    }).join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:body>' + content + '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' +
+      '<w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850" w:header="420" w:footer="420" w:gutter="0"/>' +
+      '<w:textDirection w:val="tbRl"/><w:docGrid w:type="linesAndChars" w:linePitch="480"/></w:sectPr></w:body></w:document>';
+  }
+  function zipStore(files) {
+    const encoder = new TextEncoder();
+    const chunks = [], central = [];
+    let offset = 0;
+    const crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[n] = c >>> 0;
+    }
+    const crc32 = bytes => {
+      let c = 0xffffffff;
+      for (const byte of bytes) c = crcTable[(c ^ byte) & 255] ^ (c >>> 8);
+      return (c ^ 0xffffffff) >>> 0;
+    };
+    for (const [path, content] of files) {
+      const filename = encoder.encode(path), data = encoder.encode(content), crc = crc32(data);
+      const local = new Uint8Array(30 + filename.length);
+      const l = new DataView(local.buffer);
+      l.setUint32(0, 0x04034b50, true); l.setUint16(4, 20, true);
+      l.setUint16(6, 0x0800, true); l.setUint32(14, crc, true);
+      l.setUint32(18, data.length, true); l.setUint32(22, data.length, true);
+      l.setUint16(26, filename.length, true); local.set(filename, 30);
+      chunks.push(local, data);
+      const record = new Uint8Array(46 + filename.length);
+      const v = new DataView(record.buffer);
+      v.setUint32(0, 0x02014b50, true); v.setUint16(4, 20, true); v.setUint16(6, 20, true);
+      v.setUint16(8, 0x0800, true); v.setUint32(16, crc, true);
+      v.setUint32(20, data.length, true); v.setUint32(24, data.length, true);
+      v.setUint16(28, filename.length, true); v.setUint32(42, offset, true);
+      record.set(filename, 46); central.push(record);
+      offset += local.length + data.length;
+    }
+    const centralLength = central.reduce((sum, item) => sum + item.length, 0);
+    const end = new Uint8Array(22), e = new DataView(end.buffer);
+    e.setUint32(0, 0x06054b50, true);
+    e.setUint16(8, central.length, true); e.setUint16(10, central.length, true);
+    e.setUint32(12, centralLength, true); e.setUint32(16, offset, true);
+    return new Blob([...chunks, ...central, end], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+  function makeDocx(body, rubies = [], font = 'mincho') {
+    return zipStore([
+      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
+      ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+      ['word/document.xml', wordDocument(body, rubies, font)]
+    ]);
+  }
+  function saveText() {
+    const title = downloadTitle();
+    if (!title) return;
+    const filename = safeFilename(title) + '.txt';
+    const body = input.value.replace(/\r\n?/g, '\n').replace(/\n/g, '\r\n');
+    const blob = new Blob(['\uFEFF', body], { type: 'text/plain;charset=utf-8' });
+    if (blob.size > 2000000) { alert('ファイルが2MBを超えています。'); return; }
+    downloadBlob(blob, filename);
+    return true;
+  }
+  function saveWord() {
+    const title = downloadTitle();
+    if (!title) return;
+    const blob = makeDocx(input.value, activeProject().rubies || [], activeProject().font);
+    if (blob.size > 2000000) { alert('ファイルが2MBを超えています。'); return; }
+    downloadBlob(blob, safeFilename(title) + '.docx');
+    return true;
+  }
+  let saveFeedbackEpoch = 0;
+  function clearSaveFeedback() {
+    saveFeedbackEpoch++;
+    for (const format of ['json', 'txt', 'pdf']) document.getElementById('save-' + format).classList.remove('save-started');
+    document.getElementById('save-feedback').textContent = '';
+  }
+  function signalSaveStart(format) {
+    const button = document.getElementById('save-' + format), epoch = saveFeedbackEpoch;
+    button.classList.add('save-started');
+    document.getElementById('save-feedback').textContent = ({ json: 'JSON', txt: 'TXT', docx: 'Word' }[format]) + 'のダウンロードを開始しました。';
+    setTimeout(() => { if (epoch === saveFeedbackEpoch) clearSaveFeedback(); }, 1200);
+  }
+  function saveSelectedFile(format = 'json') {
+    clearSaveFeedback();
+    document.getElementById('file-status').textContent = '';
+    try {
+    save();
+    if (format === 'pdf') {
+      if (renderBlocked) { operationProblem('紙面表示が停止しているため印刷できません。JSONで保存するか、本文を分けてください。'); return; }
+      requestManuscriptPrint(); return;
+    }
+    const saveFile = { json: saveBackup, txt: saveText, docx: saveWord }[format];
+    if (saveFile?.()) signalSaveStart(format);
+    } catch (error) { operationProblem('ファイル保存を開始できませんでした。' + error.message); }
+  }
+  // Word output is not offered: its layout in Word cannot be verified.
+  for (const format of ['json', 'txt', 'pdf']) {
+    document.getElementById('save-' + format).addEventListener('click', () => saveSelectedFile(format));
+  }
+
+  document.getElementById('open-file').addEventListener('click', () => document.getElementById('import-file').click());
+
+  async function openTextFile(file) {
+    try {
+      const read = beginRead(file);
+      const text = (await file.text()).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+      checkRead(read);
+      textWithinBounds(text);
+      if (!prepareImportDraft()) return;
+      if (input.value && !confirm('現在の原稿を読み込んだテキストで置き換えますか？ 現在の版は履歴に残します。')) return;
+      addVersion(activeProject(), '読込前');
+      activeProject().text = text; activeProject().rubies = [];
+      input.value = text; input.setSelectionRange(text.length, text.length);
+      save(); refreshVersions(); operationProblem('');
+      document.getElementById('file-status').textContent = 'テキストを開きました。';
+    } catch (error) { operationProblem('テキストを開けませんでした。' + error.message); }
+  }
+  document.getElementById('import').addEventListener('change', event => {
+    const file = event.target.files[0]; event.target.value = '';
+    if (file) return openTextFile(file);
+  });
+  async function readWordXml(file) {
+    if (file.size > 10000000) throw new Error('10MB以下のWordファイルを選んでください。');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const view = new DataView(bytes.buffer);
+    let end = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+      if (view.getUint32(i, true) === 0x06054b50 && i + 22 + view.getUint16(i + 20, true) === bytes.length) { end = i; break; }
+    }
+    if (end < 0) throw new Error('有効な.docxファイルではありません。');
+    const count = view.getUint16(end + 10, true);
+    let offset = view.getUint32(end + 16, true);
+    const decoder = new TextDecoder();
+    for (let i = 0; i < count; i++) {
+      if (offset + 46 > bytes.length || view.getUint32(offset, true) !== 0x02014b50) throw new Error('Wordファイルが破損しています。');
+      const flags = view.getUint16(offset + 8, true), method = view.getUint16(offset + 10, true);
+      const expectedCrc = view.getUint32(offset + 16, true);
+      const size = view.getUint32(offset + 20, true), expandedSize = view.getUint32(offset + 24, true);
+      const length = view.getUint16(offset + 28, true);
+      const next = offset + 46 + length + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+      if (next > bytes.length) throw new Error('Wordファイルが破損しています。');
+      const path = decoder.decode(bytes.subarray(offset + 46, offset + 46 + length));
+      if (path === 'word/document.xml') {
+        if (flags & 1) throw new Error('パスワードで保護されたWordは読み込めません。');
+        if (expandedSize > 20000000) throw new Error('本文データが大きすぎます。');
+        const local = view.getUint32(offset + 42, true);
+        if (local + 30 > bytes.length || view.getUint32(local, true) !== 0x04034b50) throw new Error('Wordファイルが破損しています。');
+        const dataStart = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+        if (dataStart + size > bytes.length) throw new Error('Wordファイルが破損しています。');
+        const data = bytes.subarray(dataStart, dataStart + size);
+        if (method === 0) return decoder.decode(verifyWordBytes(data, expandedSize, expectedCrc));
+        if (method !== 8) throw new Error('このWordの圧縮形式には対応していません。');
+        const reader = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+        const chunks = []; let total = 0;
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            total += value.length;
+            if (total > 20000000) { await reader.cancel(); throw new Error('本文データが大きすぎます。'); }
+            chunks.push(value);
+          }
+        } finally { reader.releaseLock(); }
+        const expanded = new Uint8Array(await new Blob(chunks).arrayBuffer());
+        return decoder.decode(verifyWordBytes(expanded, expandedSize, expectedCrc));
+      }
+      offset = next;
+    }
+    throw new Error('Wordの本文が見つかりません。');
+  }
+  function wordPlainText(xml, filename) {
+    if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw Error('外部定義を含むWord本文は読み込めません。');
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error('Wordの本文を解析できません。');
+    const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const body = doc.getElementsByTagNameNS(ns, 'body')[0];
+    if (!body) throw new Error('Wordの本文が見つかりません。');
+    const paragraphs = [...body.getElementsByTagNameNS(ns, 'p')];
+    const rubies = [];
+    let paragraphOffset = 0;
+    const lines = paragraphs.map(p => {
+      let text = '';
+      const walk = node => {
+        if (node.namespaceURI === ns) {
+          if (node.localName === 'del') return;
+          if (node.localName === 'ruby') {
+            const base = [...node.childNodes].find(child => child.namespaceURI === ns && child.localName === 'rubyBase');
+            const rt = [...node.childNodes].find(child => child.namespaceURI === ns && child.localName === 'rt');
+            if (!base) throw new Error('Wordのルビの親文字が見つかりません。');
+            const start = paragraphOffset + text.length;
+            walk(base);
+            const reading = rt ? [...rt.getElementsByTagNameNS(ns, 't')].map(item => item.textContent).join('') : '';
+            if (reading.trim() && paragraphOffset + text.length > start) rubies.push({ start, end: paragraphOffset + text.length, text: reading });
+            return;
+          }
+          if (node.localName === 't') { text += node.textContent; return; }
+          if (node.localName === 'tab') { text += '\t'; return; }
+          if (node.localName === 'br' || node.localName === 'cr') { text += '\n'; return; }
+        }
+        for (const child of node.childNodes) walk(child);
+      };
+      walk(p); paragraphOffset += text.length + 1; return text;
+    });
+    let title = filename.replace(/\.docx$/i, '');
+    const first = paragraphs[0];
+    const style = first?.getElementsByTagNameNS(ns, 'pStyle')[0]?.getAttributeNS(ns, 'val');
+    const alignment = first?.getElementsByTagNameNS(ns, 'jc')[0]?.getAttributeNS(ns, 'val');
+    const isTitle = /^(title|タイトル)$/i.test(style || '') || (alignment === 'center' && first?.getElementsByTagNameNS(ns, 'b').length);
+    let removed = 0;
+    if (lines[0]?.trim() && isTitle) { removed = lines[0].length + 1; title = lines.shift().trim(); }
+    const text = lines.join('\n');
+    const retained = rubies.filter(item => item.start >= removed).map(item => ({ ...item, start: item.start - removed, end: item.end - removed }));
+    // Preserve our document-wide font on round trip; mixed Word formatting is not imported.
+    const fontNames = [...body.getElementsByTagNameNS(ns, 'rFonts')].map(node => node.getAttributeNS(ns, 'eastAsia'));
+    const font = fontFromWordNames(fontNames);
+    return { title, text, rubies: normalizeRubies(text, retained), font };
+  }
+  async function openWordFile(file) {
+    try {
+      const read = beginRead(file);
+      const loaded = wordPlainText(await readWordXml(file), file.name);
+      checkRead(read);
+      textWithinBounds(loaded.text);
+      if (!prepareImportDraft()) return;
+      if (input.value && !confirm('現在の原稿をWordの本文で置き換えますか？ 現在の版は履歴に残します。')) return;
+      addVersion(activeProject(), '読込前');
+      name.value = loaded.title;
+      Object.assign(activeProject(), { text: loaded.text, rubies: loaded.rubies, font: loaded.font });
+      fontSelect.value = loaded.font; input.value = loaded.text; input.setSelectionRange(0, 0);
+      save(); refreshVersions(); operationProblem('');
+      document.getElementById('file-status').textContent = 'Wordを開きました。';
+      window.scrollTo(0, 0);
+    } catch (error) { operationProblem('Wordを開けませんでした。' + error.message); }
+  }
+  document.getElementById('import-word').addEventListener('change', event => {
+    const file = event.target.files[0]; event.target.value = '';
+    if (file) return openWordFile(file);
+  });
+  document.getElementById('import-file').addEventListener('change', event => {
+    const file = event.target.files[0]; event.target.value = '';
+    if (!file) return;
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (extension === 'json') return openJsonFile(file);
+    if (extension === 'docx') return openWordFile(file);
+    if (extension === 'txt') return openTextFile(file);
+    alert('原稿（.json）・Word（.docx）・テキスト（.txt）を選んでください。');
+  });
+  // Only the Apps Script host provides this bridge. Local HTML never claims a cloud save.
+  window.genkoBoot.stage('保存機能の確認');
+  const driveAvailable = !!window.google?.script?.run;
+  document.getElementById('drive-actions').hidden = !driveAvailable;
+  const driveStatus = document.getElementById('drive-status');
+  const driveDialog = document.getElementById('drive-dialog');
+  const driveFiles = document.getElementById('drive-files');
+  const driveListStatus = document.getElementById('drive-list-status');
+  let driveBusy = false, driveNextPage = '', driveMessage = null;
+  function manuscriptSnapshot(project) {
+    return {
+      id: project.id, title: project.title, text: project.text, font: normalizeFont(project.font),
+      rubies: normalizeRubies(project.text, project.rubies || []),
+      history: project.history.slice(-50).map(item => ({ id: item.id, at: item.at, kind: item.kind,
+        title: item.title, text: item.text, font: normalizeFont(item.font), rubies: normalizeRubies(item.text, item.rubies || []) })),
+      updatedAt: project.updatedAt, lastVersionAt: project.lastVersionAt, ...(project.protected === true ? { protected: true } : {})
+    };
+  }
+  function manuscriptFingerprint(project) {
+    const snapshot = manuscriptSnapshot(project);
+    // Local timestamps change when focus is saved, even without a content change.
+    return JSON.stringify([snapshot.title, snapshot.text, snapshot.font, snapshot.rubies, snapshot.history]);
+  }
+  function refreshDriveStatus() {
+    for (const id of ['drive-save', 'drive-save-as', 'drive-open', 'drive-refresh']) {
+      document.getElementById(id).disabled = !driveAvailable || driveBusy;
+    }
+    document.getElementById('drive-load').disabled = driveBusy || !driveFiles.value;
+    document.getElementById('drive-more').disabled = driveBusy;
+    driveFiles.disabled = driveBusy;
+    if (!driveAvailable) return;
+    const project = activeProject();
+    if (!project) return;
+    const binding = project.driveLink;
+    let text;
+    if (driveBusy) text = 'Google Driveと通信中です…';
+    else if (driveMessage?.projectId === project.id) text = driveMessage.text;
+    else if (!binding) text = 'この原稿はまだDriveに保存していません。';
+    else text = binding.fingerprint === manuscriptFingerprint(project)
+      ? 'Driveに保存済み · ' + new Date(binding.savedAt).toLocaleString('ja-JP')
+      : 'Driveに未保存の変更があります。';
+    driveStatus.textContent = text;
+    driveStatus.dataset.error = String(!driveBusy && driveMessage?.projectId === project.id && driveMessage.error === true);
+  }
+  function driveCall(method, argument) {
+    return new Promise((resolve, reject) => {
+      if (!driveAvailable) return reject(new Error('Googleドキュメント版で利用できます。'));
+      const runner = window.google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      if (method === 'save') runner.genkoDriveSave(argument);
+      else if (method === 'list') runner.genkoDriveList(argument);
+      else if (method === 'open') runner.genkoDriveOpen(argument);
+      else reject(new Error('未対応の操作です。'));
+    });
+  }
+  function driveError(error) { return error?.message || String(error || '通信に失敗しました。'); }
+  async function saveToDrive(asCopy = false) {
+    if (driveBusy || !driveAvailable) return;
+    save();
+    const project = activeProject(), projectId = project.id;
+    const snapshot = manuscriptSnapshot(project), fingerprint = manuscriptFingerprint(project);
+    const binding = asCopy ? null : project.driveLink;
+    const request = { project: snapshot };
+    if (binding) Object.assign(request, { fileId: binding.id, revision: binding.revision, fileVersion: binding.version });
+    driveBusy = true; driveMessage = null; refreshDriveStatus();
+    try {
+      const result = await driveCall('save', request);
+      if (!result?.file?.id || !result.file.version || !result.revision) throw new Error('保存結果を確認できませんでした。Driveの一覧を確認してください。');
+      // The user can keep editing or switch projects during the request.
+      const original = library.projects.find(item => item.id === projectId);
+      if (original) original.driveLink = { id: result.file.id, version: result.file.version, revision: result.revision,
+        savedAt: Date.now(), fingerprint };
+      persist();
+    } catch (error) {
+      driveMessage = { projectId, error: true, text: 'Driveに保存できませんでした。' + driveError(error) };
+    } finally { driveBusy = false; refreshDriveStatus(); }
+  }
+  async function listDriveFiles(append = false) {
+    if (driveBusy || !driveAvailable) return;
+    driveBusy = true; driveMessage = null;
+    if (!append) { driveFiles.replaceChildren(); driveNextPage = ''; }
+    driveListStatus.textContent = '原稿の一覧を読み込み中です…'; driveListStatus.dataset.error = 'false';
+    refreshDriveStatus();
+    try {
+      const result = await driveCall('list', append ? driveNextPage : '');
+      if (!Array.isArray(result?.files)) throw new Error('一覧の内容を確認できませんでした。');
+      for (const file of result.files) {
+        if (!file?.id || [...driveFiles.options].some(option => option.value === file.id)) continue;
+        const modified = file.modifiedTime ? new Date(file.modifiedTime).toLocaleString('ja-JP') : '';
+        driveFiles.add(new Option(file.name + (modified ? ' · ' + modified : ''), file.id));
+      }
+      driveNextPage = result.nextPageToken || '';
+      if (!driveFiles.value && driveFiles.options.length) driveFiles.selectedIndex = 0;
+      driveListStatus.textContent = driveFiles.options.length ? driveFiles.options.length + '件の原稿' : '保存済みの原稿はありません。';
+    } catch (error) {
+      driveListStatus.textContent = driveError(error); driveListStatus.dataset.error = 'true';
+    } finally {
+      document.getElementById('drive-more').hidden = !driveNextPage;
+      driveBusy = false; refreshDriveStatus();
+    }
+  }
+  async function openFromDrive() {
+    if (driveBusy || !driveFiles.value) return;
+    const fileId = driveFiles.value;
+    driveBusy = true; driveMessage = null; refreshDriveStatus();
+    driveListStatus.textContent = '原稿を読み込み中です…'; driveListStatus.dataset.error = 'false';
+    try {
+      const result = await driveCall('open', fileId);
+      const source = result?.project;
+      if (result?.file?.id !== fileId || !result.file.version || !result.revision ||
+          typeof source?.title !== 'string' || typeof source.text !== 'string' || !Array.isArray(source.history)) {
+        throw new Error('原稿の内容を確認できませんでした。');
+      }
+      const rubies = normalizeRubies(source.text, source.rubies || []);
+      const history = copyHistory(source);
+      save(); // Keep the current manuscript, including edits made while waiting.
+      const project = newProject(source.title, source.text);
+      Object.assign(project, { rubies, history, font: normalizeFont(source.font), lastVersionAt: Number(source.lastVersionAt) || Date.now() });
+      project.driveLink = { id: fileId, version: result.file.version, revision: result.revision,
+        savedAt: Date.now(), fingerprint: manuscriptFingerprint(project) };
+      library.projects.push(project); library.activeId = project.id;
+      persist(); showProject(); driveDialog.close(); window.scrollTo(0, 0);
+    } catch (error) {
+      driveListStatus.textContent = '開けませんでした。' + driveError(error); driveListStatus.dataset.error = 'true';
+    } finally { driveBusy = false; refreshDriveStatus(); }
+  }
+  document.getElementById('drive-save').addEventListener('click', () => saveToDrive());
+  document.getElementById('drive-save-as').addEventListener('click', () => saveToDrive(true));
+  document.getElementById('drive-open').addEventListener('click', () => {
+    save(); driveDialog.showModal(); listDriveFiles();
+  });
+  document.getElementById('drive-refresh').addEventListener('click', () => listDriveFiles());
+  document.getElementById('drive-more').addEventListener('click', () => listDriveFiles(true));
+  document.getElementById('drive-load').addEventListener('click', openFromDrive);
+  document.getElementById('drive-cancel').addEventListener('click', () => { if (!driveBusy) driveDialog.close(); });
+  driveDialog.addEventListener('cancel', event => { if (driveBusy) event.preventDefault(); });
+  driveFiles.addEventListener('change', refreshDriveStatus);
+  for (const element of [input, name]) element.addEventListener('input', () => { driveMessage = null; refreshDriveStatus(); });
+  window.genkoBoot.stage('保存データと見本の読み込み');
+  if (typeof ResizeObserver === 'function') {
+    let observedWidth = 0, queued = false;
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width || 0;
+      if (Math.abs(width - observedWidth) < .5 || queued) return;
+      observedWidth = width; queued = true;
+      requestAnimationFrame(() => { queued = false; fitPaper(); render(); });
+    });
+    observer.observe(document.getElementById('paper-scroll'));
+  }
+
+  library = loadLibrary();
+  panelSide.value = library.panelSide === 'right' ? 'right' : 'left';
+  applyPanelSide();
+  document.body.classList.toggle('panel-hidden', library.panelHidden === true);
+  fitPaper();
+  window.genkoBoot.stage('原稿一覧と用紙の描画');
+  showProject();
+  if (sampleMigrationPending) {
+    persist();
+  }
+  window.genkoBoot.ready();
+  document.fonts?.addEventListener?.('loadingdone', () => { verticalAlternateFamilies.clear(); render(); });
+  document.fonts?.ready.then(() => { centerAllAttachedCommas(); positionAllSharedCellText(); });
+  } catch (error) { window.genkoBoot.fail(error); }
+})();
