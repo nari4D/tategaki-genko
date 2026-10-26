@@ -1,6 +1,6 @@
 {
   "name": "tategaki-genko",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "private": true,
   "scripts": {
     "build": "node scripts/build-chrome-extension.cjs"

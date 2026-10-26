@@ -133,7 +133,7 @@
       sampleMigrationPending = true;
     }
     for (const id of originals) {
-      if (stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.projects) continue;
+      if (stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
       const original = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
       try { archiveBudget([...stored.projects, original]); } catch { continue; }
       stored.projects.push(original);
@@ -210,7 +210,7 @@
         return true;
       });
       for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['check-layout', 4]]) {
-        if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.projects) continue;
+        if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
         const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
         try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
         stored.projects.push(candidate);
@@ -233,7 +233,7 @@
     }
     const kept = stored.projects.filter(project => !unchangedLegacySample(project));
     for (const example of SAMPLE_CATALOG) {
-      if (kept.some(project => project.sampleId === example.sampleId) || kept.length >= SAFETY.projects) continue;
+      if (kept.some(project => project.sampleId === example.sampleId) || kept.length >= SAFETY.newProjects) continue;
       const candidate = sampleProject(example);
       try { archiveBudget([...kept, candidate]); }
       catch { continue; } // User manuscripts and their histories take priority.
@@ -252,8 +252,13 @@
 
   // These are provisional resource bounds, not manuscript formatting rules.
   // See test-results/chrome-quality-02.md for the Node/DOM measurements.
-  const SAFETY = Object.freeze({ fileBytes: 10000000, textUnits: 40000, pages: 100,
-    projects: 200, history: 50, rubies: 2000, archiveUnits: 1000000 });
+  // `projects` only validates stored and imported data, so an existing library of
+  // up to 200 still loads and saves; new manuscripts (samples included) stop at
+  // `newProjects`. Ruby-heavy prose (e.g. Izumi Kyoka) has about 25 rubies a page,
+  // so 100 pages need room for well over 2,000. A Word file may carry pictures, so
+  // it may be larger than other files; only its text XML is expanded (20 MB cap).
+  const SAFETY = Object.freeze({ fileBytes: 10000000, wordBytes: 50000000, textUnits: 40000, pages: 100,
+    projects: 200, newProjects: 30, history: 50, rubies: 5000, archiveUnits: 1000000 });
   let originalStored = null, lastStored = null, storageProtected = false;
   let unsavedChanges = false, libraryRevision = 0, readTicket = 0, pendingRead = null;
   let composing = false, renderBlocked = false;
@@ -315,24 +320,24 @@
     if (new Set(ids).size !== ids.length) throw Error('同じIDの原稿が重複しています。');
     return projects;
   }
-  function checkFileSize(file) {
-    if (!Number.isFinite(file.size) || file.size < 0 || file.size > SAFETY.fileBytes) throw Error('10MB以下のファイルを選んでください。');
+  function checkFileSize(file, limit = SAFETY.fileBytes) {
+    if (!Number.isFinite(file.size) || file.size < 0 || file.size > limit) throw Error(limit / 1000000 + 'MB以下のファイルを選んでください。');
   }
   function rubyBoundaries(text) {
     if (text.length <= SAFETY.textUnits || !segmenter) return new Set([0, text.length, ...segments(text).map(part => part.offset)]);
     const iterator = segmenter.segment(text);
     return { has(offset) { return offset === text.length || iterator.containing(offset)?.index === offset; } };
   }
-  function beginRead(file) {
-    checkFileSize(file);
+  function beginRead(file, limit) {
+    checkFileSize(file, limit);
     return { ticket: ++readTicket, revision: libraryRevision };
   }
   function checkRead(read) {
     if (read.ticket !== readTicket || read.revision !== libraryRevision) throw Error('読み込み中に原稿を編集・切替したか、別のファイルを選びました。現在の原稿を保護するため読み込みを中止しました。');
   }
   function canAddProjects(count) {
-    if (library.projects.length + count <= SAFETY.projects) return true;
-    operationProblem('原稿は200件までです。必要な原稿をJSONで保存してから、不要な原稿を削除してください。');
+    if (library.projects.length + count <= SAFETY.newProjects) return true;
+    operationProblem('原稿は30件までです。必要な原稿をJSONで保存してから、不要な原稿を削除してください。');
     return false;
   }
   const wordCrcTable = Array.from({ length: 256 }, (_, n) => {
@@ -1040,6 +1045,22 @@
     versionsSelect.replaceChildren(...[...history].reverse().map(version =>
       new Option(new Date(version.at).toLocaleString('ja-JP') + ' · ' + (version.kind === '復元前' ? '戻す前の原稿' : version.kind), version.id)));
   }
+  // New writing comes before old versions: when the library would outgrow the
+  // storage budget, the oldest history versions (of any manuscript) are dropped
+  // first, so saving never stops while history remains. Current text is never cut.
+  function trimHistoryToBudget(projects) {
+    const size = version => version.title.length + version.text.length + (version.rubies || []).reduce((sum, ruby) => sum + ruby.text.length, 0);
+    let total = projects.reduce((sum, project) => sum + size(project) + project.history.reduce((all, version) => all + size(version), 0), 0);
+    let trimmed = false;
+    while (total > SAFETY.archiveUnits) {
+      let oldest = null;
+      for (const project of projects) if (project.history.length && (!oldest || project.history[0].at < oldest.history[0].at)) oldest = project;
+      if (!oldest) break;
+      total -= size(oldest.history.shift());
+      trimmed = true;
+    }
+    return trimmed;
+  }
   function persist() {
     libraryRevision++;
     library.panelSide = panelSide.value;
@@ -1048,6 +1069,7 @@
       if (localStorage.getItem(LIBRARY_KEY) !== lastStored) {
         storageProtected = true; throw Error('別のタブで保存先が変更されました');
       }
+      if (trimHistoryToBudget(library.projects)) refreshVersions();
       archiveBudget(library.projects);
       const serialized = JSON.stringify(library);
       localStorage.setItem(LIBRARY_KEY, serialized);
@@ -1793,7 +1815,7 @@
     if (file) return openTextFile(file);
   });
   async function readWordXml(file) {
-    if (file.size > 10000000) throw new Error('10MB以下のWordファイルを選んでください。');
+    if (file.size > SAFETY.wordBytes) throw new Error(SAFETY.wordBytes / 1000000 + 'MB以下のWordファイルを選んでください。');
     const bytes = new Uint8Array(await file.arrayBuffer());
     const view = new DataView(bytes.buffer);
     let end = -1;
@@ -1890,7 +1912,7 @@
   }
   async function openWordFile(file) {
     try {
-      const read = beginRead(file);
+      const read = beginRead(file, SAFETY.wordBytes);
       const loaded = wordPlainText(await readWordXml(file), file.name);
       checkRead(read);
       textWithinBounds(loaded.text);
