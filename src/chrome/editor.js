@@ -324,7 +324,8 @@
     if (!Number.isFinite(file.size) || file.size < 0 || file.size > limit) throw Error(limit / 1000000 + 'MB以下のファイルを選んでください。');
   }
   function rubyBoundaries(text) {
-    if (text.length <= SAFETY.textUnits || !segmenter) return new Set([0, text.length, ...segments(text).map(part => part.offset)]);
+    // A long text asks the segmenter about each offset instead of splitting it all.
+    if (text.length <= 2000 || !segmenter) return new Set([0, text.length, ...segments(text).map(part => part.offset)]);
     const iterator = segmenter.segment(text);
     return { has(offset) { return offset === text.length || iterator.containing(offset)?.index === offset; } };
   }
@@ -355,6 +356,7 @@
     renderBlocked = true;
     document.body.classList.add('plain-recovery');
     pages.replaceChildren();
+    pageViews.length = 0; plan = null;
     stops = [];
     pageIndicator.textContent = '紙面表示を停止';
     operationProblem(error.message + ' 入力内容は切り捨てていません。本文欄で分割するか、JSONで保存してください。');
@@ -434,16 +436,10 @@
     document.documentElement.style.setProperty('--paper-height', (630 * scale + 26) + 'px');
   }
 
-  function updatePageIndicator() {
+  function updatePageIndicator(range) {
     if (!pages.children.length) return;
-    if (!overviewMode) {
-      let closest = Infinity;
-      for (let i = 0; i < pages.children.length; i++) {
-        const rect = pages.children[i].getBoundingClientRect();
-        const distance = Math.abs((rect.top + rect.bottom) / 2 - window.innerHeight / 2);
-        if (distance < closest) { closest = distance; visiblePage = i; }
-      }
-    }
+    // Reading every page's position would lay out every page; two suffice.
+    if (!overviewMode) visiblePage = (range || visiblePages()).center;
     pageIndicator.textContent = `${visiblePage + 1} / ${pages.children.length}`;
   }
   let visiblePage = 0, indicatorQueued = false;
@@ -472,7 +468,7 @@
       button.title = show ? '通常表示へ戻る（Esc）' : '全ページを一覧表示';
       button.setAttribute('aria-label', button.title);
     }
-    if (show) updateOverviewLayout();
+    if (show) { buildAllPages(); updateOverviewLayout(); }
     else {
       render();
       requestAnimationFrame(() => {
@@ -481,7 +477,19 @@
       });
     }
   }
-  const segments = value => segmenter ? [...segmenter.segment(value)].map(x => ({ text: x.segment, offset: x.index })) : [...value].map((text, i) => ({ text, offset: i }));
+  // One keystroke splits the same manuscript several times (layout, ruby checks,
+  // the character count), so the last few long texts keep their split. Callers
+  // never change the returned array.
+  const segments = (cache => value => {
+    const cached = cache.get(value);
+    if (cached) return cached;
+    const result = segmenter ? [...segmenter.segment(value)].map(x => ({ text: x.segment, offset: x.index })) : [...value].map((text, i) => ({ text, offset: i }));
+    if (value.length > 200) {
+      cache.set(value, result);
+      if (cache.size > 4) cache.delete(cache.keys().next().value);
+    }
+    return result;
+  })(new Map());
   // RUBY_MODEL_START: UTF-16 offsets match textarea selection and DOCX text.
   function normalizeRubies(text, items = []) {
     if (!Array.isArray(items)) throw new Error('ルビのデータが不正です。');
@@ -515,7 +523,8 @@
     }).filter(item => afterBoundaries.has(item.start) && afterBoundaries.has(item.end)));
   }
   // RUBY_MODEL_END
-  function layout(value) {
+  // Lays out a run of text from the top of a fresh column.
+  function layoutRun(value) {
     let page = 0, column = 0, row = 0, wrapped = false;
     const glyphs = [];
     const positions = [{ offset: 0, page, column, row }];
@@ -573,6 +582,11 @@
       previous = char;
       positions.push({ offset: part.offset + part.text.length, page, column, row });
     }
+    // The character count shown in the panel: every cell but spaces.
+    const characters = glyphs.reduce((sum, item) => sum + (/^\s+$/u.test(item.text) ? 0 : 1), 0);
+    return { glyphs, positions, page, column, row, wrapped, characters };
+  }
+  function finishLayout({ glyphs, positions, page, column, wrapped, characters }) {
     // A cursor just after the last cell does not require an empty manuscript page.
     // Explicit line breaks still retain their intended blank columns/pages.
     const pageCount = Math.max(1, page + 1 - (wrapped && column === 0 ? 1 : 0));
@@ -581,7 +595,39 @@
         Object.assign(position, { page: pageCount - 1, column: COLS - 1, row: ROWS });
       }
     }
-    return { glyphs, positions, pageCount };
+    return { glyphs, positions, pageCount, characters };
+  }
+  // After a line break the next paragraph starts at the top of a fresh column with
+  // nothing carried over, so each paragraph's run is kept and only edited
+  // paragraphs are laid out again; the runs are joined by column number. The
+  // result is the same as laying out the whole text at once (see the tests).
+  const paragraphRuns = new Map();
+  function layout(value) {
+    if (value.length < 2000 || value.includes('\r')) return finishLayout(layoutRun(value));
+    const glyphs = [], positions = [{ offset: 0, page: 0, column: 0, row: 0 }], used = new Map();
+    let base = 0, offset = 0, row = 0, wrapped = false, characters = 0;
+    value.split('\n').forEach((text, index) => {
+      if (index) {
+        if (!wrapped) base++;
+        row = 0; wrapped = false; offset++;
+        positions.push({ offset, page: Math.floor(base / COLS), column: base % COLS, row: 0 });
+      }
+      const run = used.get(text) || paragraphRuns.get(text) || layoutRun(text);
+      used.set(text, run);
+      for (const item of run.glyphs) {
+        const at = base + item.page * COLS + item.column;
+        glyphs.push({ ...item, page: Math.floor(at / COLS), column: at % COLS, start: item.start + offset, end: item.end + offset });
+      }
+      for (let i = 1; i < run.positions.length; i++) {
+        const position = run.positions[i], at = base + position.page * COLS + position.column;
+        positions.push({ offset: position.offset + offset, page: Math.floor(at / COLS), column: at % COLS, row: position.row });
+      }
+      base += run.page * COLS + run.column; row = run.row; wrapped = run.wrapped; characters += run.characters;
+      offset += text.length;
+    });
+    paragraphRuns.clear();
+    for (const [text, run] of used) paragraphRuns.set(text, run);
+    return finishLayout({ glyphs, positions, page: Math.floor(base / COLS), column: base % COLS, wrapped, characters });
   }
   // Ruby annotates the established body layout; it must never move body cells.
   // A separator is an explicit user-supplied reading boundary, never guessed.
@@ -642,8 +688,8 @@
     comma.setAttribute('x', String(ATTACHED_MARK_CENTER - bounds.x - bounds.width / 2));
     comma.setAttribute('y', String(ATTACHED_MARK_CENTER - bounds.y - bounds.height / 2));
   }
-  function centerAllAttachedCommas() {
-    for (const comma of pages.querySelectorAll('.comma-text')) centerAttachedComma(comma);
+  function centerAllAttachedCommas(root = pages) {
+    for (const comma of root.querySelectorAll('.comma-text')) centerAttachedComma(comma);
   }
   // Some families (BIZ UDMincho, UD Digi Kyokasho, Yomogi) have no U+FE10-FE4F
   // code points, only 'vert' alternates of the ordinary characters. Chrome
@@ -703,9 +749,9 @@
     text.style.fill = 'var(--ink)'; text.style.stroke = 'none';
     return text;
   }
-  function positionAllSharedCellText() {
+  function positionAllSharedCellText(root = pages) {
     const family = FONT_OPTIONS[normalizeFont(activeProject()?.font)].css;
-    for (const text of pages.querySelectorAll('.shared-cell-text')) {
+    for (const text of root.querySelectorAll('.shared-cell-text')) {
       const x = Number(text.dataset.centerX), y = Number(text.dataset.centerY);
       const maxWidth = Number(text.dataset.maxWidth), maxHeight = Number(text.dataset.maxHeight);
       const rotate = text.dataset.rotate === 'true';
@@ -761,8 +807,8 @@
     mark.setAttribute('x', String(x - bounds.x - bounds.width / 2));
     mark.setAttribute('y', String(y - bounds.y - bounds.height / 2));
   }
-  function centerAllWesternMarks() {
-    for (const mark of pages.querySelectorAll('.western-mark-text')) centerWesternMark(mark);
+  function centerAllWesternMarks(root = pages) {
+    for (const mark of root.querySelectorAll('.western-mark-text')) centerWesternMark(mark);
   }
   function searchRanges(value, query) {
     if (!query) return [];
@@ -785,88 +831,139 @@
     }
     findCount.textContent = findMatches.length ? `${activeFindIndex + 1} / ${findMatches.length}` : '0 / 0';
   }
-  function render() {
-    try { textWithinBounds(input.value); }
-    catch (error) { protectOversizedRender(error); return; }
-    if (renderBlocked) { renderBlocked = false; document.body.classList.remove('plain-recovery'); operationProblem(''); }
-    const selectedFont = FONT_OPTIONS[normalizeFont(activeProject()?.font)];
-    pages.style.setProperty('--manuscript-font', selectedFont.css);
-    COMMA_FONT = '20px ' + selectedFont.css;
-    document.title = name.value.trim() || '縦書き原稿';
-    const currentRubies = composing ? rebaseRubies(activeProject().text, input.value, activeProject().rubies || []) : normalizeRubies(input.value, activeProject()?.rubies || []);
-    const result = boundedLayout.result;
-    stops = result.positions;
-    refreshFindMatches();
-    const fragment = document.createDocumentFragment();
-    const sheets = [];
-    for (let i = 0; i < result.pageCount; i++) {
-      const page = document.createElement('div');
-      page.className = 'page';
-      const sheet = document.createElement('div');
-      sheet.className = 'sheet';
-      sheet.dataset.page = String(i);
-      for (let column = 0; column < COLS; column++) {
-        const rule = document.createElement('div');
-        rule.className = 'column-rule';
-        rule.style.right = columnRight(column) + 'px';
-        sheet.append(rule);
-      }
-      const footer = document.createElement('div');
-      footer.className = 'page-footer';
-      const dimensions = document.createElement('span');
-      dimensions.textContent = '20×20';
-      const number = document.createElement('span');
-      number.textContent = String(i + 1);
-      footer.append(dimensions, number);
-      page.append(sheet, footer);
-      fragment.append(page);
-      sheets.push(sheet);
+  // Pages persist between renders. Each render plans what every page shows (one
+  // key per page) and rebuilds only pages whose key changed. Only the pages near
+  // the screen (NEAR_PAGES either side) hold their content: the browser lays out
+  // every attached element on each change, so a far page is an empty sheet until
+  // it comes near, when its kept content goes back in. Pages on screen and the
+  // caret's page are brought up to date at once, the rest of the window while the
+  // browser is idle, so a keystroke costs about the same on page 1 and on page 100.
+  // Printing and the overview show every page. Without requestIdleCallback (the
+  // test DOM model) every page is shown and up to date at once.
+  const NEAR_PAGES = 10;
+  const pageViews = [];
+  let plan = null, idleTask = null, showAllPages = false;
+  function pageShell(index) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.dataset.page = String(index);
+    const rules = [];
+    for (let column = 0; column < COLS; column++) {
+      const rule = document.createElement('div');
+      rule.className = 'column-rule';
+      rule.style.right = columnRight(column) + 'px';
+      rules.push(rule);
     }
-    const selectionStart = input.selectionStart, selectionEnd = input.selectionEnd;
-    if (selectionStart !== selectionEnd) {
-      const seen = new Set();
-      for (const item of result.glyphs) {
-        if (item.start >= selectionEnd || item.end <= selectionStart) continue;
-        const key = `${item.page}:${item.column}:${item.row}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const highlight = document.createElement('span');
-        highlight.className = 'selection-cell';
-        highlight.style.right = columnRight(item.column) + 'px';
-        highlight.style.top = (item.row * CELL) + 'px';
-        sheets[item.page].append(highlight);
+    const footer = document.createElement('div');
+    footer.className = 'page-footer';
+    const dimensions = document.createElement('span');
+    dimensions.textContent = '20×20';
+    const number = document.createElement('span');
+    number.textContent = String(index + 1);
+    footer.append(dimensions, number);
+    page.append(sheet, footer);
+    return { page, sheet, rules, key: null, nodes: [], shown: false };
+  }
+  function matchPageCount(count) {
+    for (const view of pageViews.splice(count)) view.page.remove();
+    while (pageViews.length < count) {
+      const view = pageShell(pageViews.length);
+      pageViews.push(view);
+      pages.append(view.page);
+    }
+  }
+  function invalidatePages() { for (const view of pageViews) view.key = null; }
+  // First index at or after each page, for items listed in page order.
+  function pageStarts(items, pageCount) {
+    const starts = new Array(pageCount + 1);
+    let at = 0;
+    for (let page = 0; page <= pageCount; page++) {
+      while (at < items.length && items[at].page < page) at++;
+      starts[page] = at;
+    }
+    return starts;
+  }
+  const cellKey = item => item.column * ROWS + item.row;
+  function pageOverlays(index) {
+    const { glyphs } = plan.result, from = plan.glyphStarts[index], to = plan.glyphStarts[index + 1];
+    const selected = new Set(), found = new Map();
+    if (plan.selectionStart !== plan.selectionEnd) {
+      for (let i = from; i < to; i++) {
+        const item = glyphs[i];
+        if (item.start < plan.selectionEnd && item.end > plan.selectionStart) selected.add(cellKey(item));
       }
     }
-    if (findMatches.length) {
-      const foundCells = new Map();
-      let matchIndex = 0;
-      for (const item of result.glyphs) {
-        while (matchIndex < findMatches.length && findMatches[matchIndex].end <= item.start) matchIndex++;
-        for (let i = matchIndex; i < findMatches.length && findMatches[i].start < item.end; i++) {
-          if (findMatches[i].end <= item.start) continue;
-          const key = `${item.page}:${item.column}:${item.row}`;
-          const active = i === activeFindIndex;
-          if (!foundCells.has(key) || active) foundCells.set(key, { item, active });
+    const matches = plan.findMatches;
+    if (matches.length && from < to) {
+      let low = 0, high = matches.length;
+      while (low < high) { const mid = (low + high) >> 1; if (matches[mid].end <= glyphs[from].start) low = mid + 1; else high = mid; }
+      let matchIndex = low;
+      for (let i = from; i < to; i++) {
+        const item = glyphs[i];
+        while (matchIndex < matches.length && matches[matchIndex].end <= item.start) matchIndex++;
+        for (let m = matchIndex; m < matches.length && matches[m].start < item.end; m++) {
+          if (matches[m].end <= item.start) continue;
+          const key = cellKey(item), active = m === plan.activeFindIndex;
+          if (!found.has(key) || active) found.set(key, active);
         }
       }
-      for (const { item, active } of foundCells.values()) {
-        const highlight = document.createElement('span');
-        highlight.className = active ? 'find-cell find-active' : 'find-cell';
-        highlight.style.right = columnRight(item.column) + 'px';
-        highlight.style.top = (item.row * CELL) + 'px';
-        sheets[item.page].append(highlight);
-      }
     }
-    const sharedBodyCells = new Set(result.glyphs
-      .filter(item => !item.attached && !punctuation.has(item.text) && !closing.has(item.text))
-      .map(item => `${item.page}:${item.column}:${item.row}`));
-    for (const item of result.glyphs) {
+    return { selected, found };
+  }
+  function pageKey(index) {
+    const { glyphs } = plan.result, parts = [plan.font];
+    for (let i = plan.glyphStarts[index]; i < plan.glyphStarts[index + 1]; i++) {
+      const item = glyphs[i];
+      parts.push(item.text, cellKey(item), item.attached ? item.cornerAttached ? 2 : 1 : 0, item.westernMark ? 1 : 0);
+    }
+    for (let i = plan.rubyStarts[index]; i < plan.rubyStarts[index + 1]; i++) {
+      const ruby = plan.rubyRuns[i];
+      parts.push('r', cellKey(ruby), ruby.height, ruby.size, ruby.text, ruby.needsSplit ? ruby.base : '');
+    }
+    const { selected, found } = pageOverlays(index);
+    parts.push('s', ...selected, 'f', ...[...found].flat());
+    if (plan.caret && plan.caret.page === index) parts.push('c', cellKey(plan.caret));
+    return parts.join('\u0001');
+  }
+  function hidePage(index) {
+    const view = pageViews[index];
+    if (!view.shown) return;
+    view.sheet.replaceChildren();
+    view.shown = false;
+  }
+  function buildPage(index) {
+    const view = pageViews[index], key = pageKey(index);
+    if (view.key === key) {
+      if (!view.shown) { view.sheet.replaceChildren(...view.nodes); view.shown = true; }
+      return false;
+    }
+    const { glyphs } = plan.result, from = plan.glyphStarts[index], to = plan.glyphStarts[index + 1];
+    const nodes = [...view.rules];
+    const { selected, found } = pageOverlays(index);
+    const cell = (className, key) => {
+      const highlight = document.createElement('span');
+      highlight.className = className;
+      highlight.style.right = columnRight(Math.floor(key / ROWS)) + 'px';
+      highlight.style.top = (key % ROWS * CELL) + 'px';
+      return highlight;
+    };
+    for (const key of selected) nodes.push(cell('selection-cell', key));
+    for (const [key, active] of found) nodes.push(cell(active ? 'find-cell find-active' : 'find-cell', key));
+    const sharedBodyCells = new Set();
+    for (let i = from; i < to; i++) {
+      const item = glyphs[i];
+      if (!item.attached && !punctuation.has(item.text) && !closing.has(item.text)) sharedBodyCells.add(cellKey(item));
+    }
+    for (let i = from; i < to; i++) {
+      const item = glyphs[i];
       // One renderer and one set of sizes for shared marks at every row.
       // The body character always keeps its ordinary renderer and position.
       if (item.attached && (punctuation.has(item.text) || closing.has(item.text))) {
         // A punctuation-only final cell is still an ordinary cell. Only marks
         // forced into a body character's cell need the line-end placement.
-        const sharesBody = item.attached && sharedBodyCells.has(`${item.page}:${item.column}:${item.row}`);
+        const sharesBody = sharedBodyCells.has(cellKey(item));
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('attached-mark');
         if (item.cornerAttached) svg.classList.add('corner-mark');
@@ -900,7 +997,7 @@
           if (sharesBody) bracket.dataset.bottomInset = 1;
           svg.append(bracket);
         }
-        sheets[item.page].append(svg);
+        nodes.push(svg);
         continue;
       }
       if (item.westernMark) {
@@ -915,7 +1012,7 @@
         mark.style.font = COMMA_FONT;
         mark.textContent = item.text;
         svg.append(mark);
-        sheets[item.page].append(svg);
+        nodes.push(svg);
         continue;
       }
       const glyph = document.createElement('span');
@@ -949,20 +1046,10 @@
         glyph.style.right = columnRight(item.column) + 'px';
         glyph.style.top = (item.row * CELL) + 'px';
       }
-      sheets[item.page].append(glyph);
+      nodes.push(glyph);
     }
-    const rubyRuns = buildRubyRuns(input.value, currentRubies, result.glyphs);
-    const unresolved = rubyRuns.filter(ruby => ruby.needsSplit);
-    const rubyStatus = document.getElementById('ruby-status');
-    if (unresolved.length) {
-      rubyStatus.dataset.splitWarning = 'true';
-      rubyStatus.textContent = unresolved.slice(0, 3).map(ruby => '「' + ruby.base + '」（' + ruby.text + '）').join('、') +
-        (unresolved.length > 3 ? ' ほか' : '') + 'は列をまたぎます。本文を選び、文字ごとの読みを「きょう｜と」のように指定してください。※の位置の読みは未表示です。';
-    } else if (rubyStatus.dataset.splitWarning === 'true') {
-      delete rubyStatus.dataset.splitWarning;
-      rubyStatus.textContent = '本文を選択して、ふりがなを変更できます。';
-    }
-    for (const ruby of rubyRuns) {
+    for (let i = plan.rubyStarts[index]; i < plan.rubyStarts[index + 1]; i++) {
+      const ruby = plan.rubyRuns[i];
       if (ruby.needsSplit) {
         const marker = document.createElement('span');
         marker.className = 'ruby-run ruby-warning';
@@ -970,7 +1057,7 @@
         marker.title = ruby.base + '（' + ruby.text + '）：読みの区切りを指定してください';
         marker.style.right = (columnRight(ruby.column) - 11) + 'px';
         marker.style.top = (ruby.row * CELL) + 'px';
-        sheets[ruby.page].append(marker);
+        nodes.push(marker);
         continue;
       }
       const run = document.createElement('span');
@@ -989,23 +1076,97 @@
         span.style.top = ((i + .5) * ruby.height / letters.length - ruby.size / 2) + 'px';
         run.append(span);
       });
-      sheets[ruby.page].append(run);
+      nodes.push(run);
     }
+    if (plan.caret && plan.caret.page === index) {
+      const caret = document.createElement('span');
+      caret.className = 'cursor';
+      caret.style.right = (columnRight(plan.caret.column) + 3) + 'px';
+      caret.style.top = (plan.caret.row * CELL + 1) + 'px';
+      nodes.push(caret);
+    }
+    view.sheet.replaceChildren(...nodes);
+    centerAllAttachedCommas(view.sheet);
+    positionAllSharedCellText(view.sheet);
+    centerAllWesternMarks(view.sheet);
+    Object.assign(view, { key, nodes, shown: true });
+    return true;
+  }
+  // Pages on screen, from the first page's position and the page pitch.
+  function visiblePages() {
+    const count = pageViews.length;
+    if (!count) return { first: 0, last: -1, center: 0 };
+    const top = pageViews[0].page.getBoundingClientRect().top;
+    const pitch = count > 1 ? pageViews[1].page.getBoundingClientRect().top - top : 0;
+    if (!(pitch > 0)) return { first: 0, last: count - 1, center: 0 };
+    const clamp = value => Math.max(0, Math.min(count - 1, Math.floor(value)));
+    return { first: clamp(-top / pitch), last: clamp((window.innerHeight - top) / pitch), center: clamp((window.innerHeight / 2 - top) / pitch) };
+  }
+  // Shows every page, up to date: for printing and the overview.
+  function buildAllPages() {
+    if (idleTask !== null) { window.cancelIdleCallback?.(idleTask); idleTask = null; }
+    if (plan) for (let i = 0; i < pageViews.length; i++) buildPage(i);
+  }
+  function scheduleIdlePages(order) {
+    if (idleTask !== null) window.cancelIdleCallback(idleTask);
+    let next = 0;
+    const work = deadline => {
+      idleTask = null;
+      while (next < order.length && (deadline.didTimeout || deadline.timeRemaining() > 2)) buildPage(order[next++]);
+      if (next < order.length) idleTask = window.requestIdleCallback(work, { timeout: 200 });
+    };
+    if (order.length) idleTask = window.requestIdleCallback(work, { timeout: 200 });
+  }
+  function bringPagesUpToDate(range) {
+    if (!plan) return;
+    if (typeof window.requestIdleCallback !== 'function' || overviewMode || showAllPages) { buildAllPages(); return; }
+    const { first, last, center } = range || visiblePages(), caretPage = plan.caret?.page;
+    const from = Math.max(0, first - NEAR_PAGES), to = Math.min(pageViews.length - 1, last + NEAR_PAGES);
+    for (let i = 0; i < pageViews.length; i++) if ((i < from || i > to) && i !== caretPage) hidePage(i);
+    for (let i = first; i <= last; i++) buildPage(i);
+    if (caretPage !== undefined) buildPage(caretPage);
+    const rest = [];
+    for (let i = from; i <= to; i++) if (i < first || i > last) rest.push(i);
+    scheduleIdlePages(rest.sort((a, b) => Math.abs(a - center) - Math.abs(b - center) || a - b));
+  }
+  function render() {
+    try { textWithinBounds(input.value); }
+    catch (error) { protectOversizedRender(error); return; }
+    if (renderBlocked) { renderBlocked = false; document.body.classList.remove('plain-recovery'); operationProblem(''); }
+    const selectedFont = FONT_OPTIONS[normalizeFont(activeProject()?.font)];
+    // Setting the font again, even unchanged, makes the browser restyle every page.
+    if (pages.style.getPropertyValue?.('--manuscript-font') !== selectedFont.css) pages.style.setProperty('--manuscript-font', selectedFont.css);
+    COMMA_FONT = '20px ' + selectedFont.css;
+    const title = name.value.trim() || '縦書き原稿';
+    if (document.title !== title) document.title = title;
+    const currentRubies = composing ? rebaseRubies(activeProject().text, input.value, activeProject().rubies || []) : normalizeRubies(input.value, activeProject()?.rubies || []);
+    const result = boundedLayout.result;
+    stops = result.positions;
+    refreshFindMatches();
+    const rubyRuns = buildRubyRuns(input.value, currentRubies, result.glyphs);
+    const unresolved = rubyRuns.filter(ruby => ruby.needsSplit);
+    const rubyStatus = document.getElementById('ruby-status');
+    if (unresolved.length) {
+      rubyStatus.dataset.splitWarning = 'true';
+      rubyStatus.textContent = unresolved.slice(0, 3).map(ruby => '「' + ruby.base + '」（' + ruby.text + '）').join('、') +
+        (unresolved.length > 3 ? ' ほか' : '') + 'は列をまたぎます。本文を選び、文字ごとの読みを「きょう｜と」のように指定してください。※の位置の読みは未表示です。';
+    } else if (rubyStatus.dataset.splitWarning === 'true') {
+      delete rubyStatus.dataset.splitWarning;
+      rubyStatus.textContent = '本文を選択して、ふりがなを変更できます。';
+    }
+    const selectionStart = input.selectionStart, selectionEnd = input.selectionEnd;
     const offset = input.selectionDirection === 'backward' ? selectionStart : selectionEnd;
     let at = stops[0];
     for (const stop of stops) { if (stop.offset > offset) break; at = stop; }
-    const caret = document.createElement('span');
-    caret.className = 'cursor';
-    caret.style.right = (columnRight(at.column) + 3) + 'px';
-    caret.style.top = (at.row * CELL + 1) + 'px';
-    if (document.activeElement === input && selectionStart === selectionEnd) sheets[at.page].append(caret);
-    pages.replaceChildren(fragment);
-    centerAllAttachedCommas();
-    positionAllSharedCellText();
-    centerAllWesternMarks();
+    plan = { result, rubyRuns, font: selectedFont.css, text: input.value, direction: input.selectionDirection, selectionStart, selectionEnd, findMatches, activeFindIndex,
+      caret: document.activeElement === input && selectionStart === selectionEnd ? at : null,
+      glyphStarts: pageStarts(result.glyphs, result.pageCount), rubyStarts: pageStarts(rubyRuns, result.pageCount) };
+    matchPageCount(result.pageCount);
+    // Read positions before changing any page: a page's size never depends on its content.
+    const range = visiblePages(), sheetRect = pageViews[at.page].sheet.getBoundingClientRect();
+    bringPagesUpToDate(range);
     updateOverviewLayout();
-    updatePageIndicator();
-    const sheetRect = sheets[at.page].getBoundingClientRect();
+    updatePageIndicator(range);
     const displayScale = sheetRect.width / 804;
     if (!composing) {
       // Windows IME opens its candidate list below the caret, its frame starting
@@ -1015,7 +1176,7 @@
       input.style.left = (sheetRect.right - columnRight(at.column) * displayScale + 36) + 'px';
       input.style.top = (sheetRect.top + at.row * CELL * displayScale) + 'px';
     }
-    countEl.textContent = segments(input.value).filter(part => !/^\s+$/u.test(part.text)).length.toLocaleString('ja-JP');
+    countEl.textContent = result.characters.toLocaleString('ja-JP');
   }
   const newId = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   const newProject = (title = '', text = '') => ({ id: newId(), title, text, font: 'mincho', rubies: [], history: [], updatedAt: Date.now(), lastVersionAt: text ? 0 : Date.now() });
@@ -1257,7 +1418,13 @@
     } else input.setSelectionRange(target.offset, target.offset);
     render();
   });
-  input.addEventListener('keyup', render);
+  // A key's input event has already rendered; key-up only matters when the key
+  // moved the selection without changing the text (Home, End, Shift+arrows...).
+  input.addEventListener('keyup', () => {
+    if (plan && plan.text === input.value && plan.selectionStart === input.selectionStart && plan.selectionEnd === input.selectionEnd &&
+        plan.direction === input.selectionDirection) return;
+    render();
+  });
   input.addEventListener('click', render);
   input.addEventListener('blur', render);
   document.addEventListener('mousedown', event => {
@@ -1365,9 +1532,12 @@
   document.getElementById('first-page').addEventListener('click', () => jumpToPage(0));
   document.getElementById('last-page').addEventListener('click', () => jumpToPage(pages.children.length - 1));
   function scrollToFindMatch() {
-    const match = pages.querySelector('.find-active');
-    const page = match?.closest('.page');
-    if (page) showFindPage([...pages.children].indexOf(page));
+    const match = findMatches[activeFindIndex];
+    if (!match || !plan) return;
+    const glyph = plan.result.glyphs.find(item => item.end > match.start);
+    if (!glyph) return;
+    buildPage(glyph.page);
+    showFindPage(glyph.page);
   }
   let findPageIndex = 0;
   function positionFindBar() {
@@ -1432,11 +1602,13 @@
   window.addEventListener('scroll', () => {
     if (indicatorQueued) return;
     indicatorQueued = true;
-    requestAnimationFrame(() => { indicatorQueued = false; updatePageIndicator(); });
+    requestAnimationFrame(() => { indicatorQueued = false; if (plan && !overviewMode && !renderBlocked) bringPagesUpToDate(); updatePageIndicator(); });
   }, { passive: true });
   window.addEventListener('resize', () => { fitPaper(); render(); });
   const printPages = document.getElementById('print-pages');
   function buildPrintPages() {
+    showAllPages = true;
+    buildAllPages();
     printPages.style.setProperty('--manuscript-font', FONT_OPTIONS[normalizeFont(activeProject().font)].css);
     printPages.replaceChildren(...[...pages.children].map(page => {
       const frame = document.createElement('div');
@@ -1462,7 +1634,7 @@
     if (document.fonts?.ready) document.fonts.ready.then(start, () => { printRequestPending = false; operationProblem('書体を読み込めませんでした。'); });
     else start();
   }
-  window.addEventListener('afterprint', () => printPages.replaceChildren());
+  window.addEventListener('afterprint', () => { printPages.replaceChildren(); showAllPages = false; bringPagesUpToDate(); });
   window.addEventListener('beforeprint', () => { if (overviewMode) setOverview(false); centerAllAttachedCommas(); positionAllSharedCellText(); centerAllWesternMarks(); });
   window.addEventListener('beforeprint', buildPrintPages);
   projectSelect.addEventListener('change', () => {
@@ -2100,7 +2272,7 @@
     persist();
   }
   window.genkoBoot.ready();
-  document.fonts?.addEventListener?.('loadingdone', () => { verticalAlternateFamilies.clear(); render(); });
+  document.fonts?.addEventListener?.('loadingdone', () => { verticalAlternateFamilies.clear(); invalidatePages(); render(); });
   document.fonts?.ready.then(() => { centerAllAttachedCommas(); positionAllSharedCellText(); });
   } catch (error) { window.genkoBoot.fail(error); }
 })();

@@ -93,7 +93,10 @@
   .selection-cell { position: absolute; width: var(--cell); height: var(--cell); background: #72b7e56b; pointer-events: none; }
   .cursor { position: absolute; width: calc(var(--cell) - 6px); height: 2px; background: #216b61; pointer-events: none; animation: blink 1.1s step-end infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  #input { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: .01; resize: none; overflow: hidden; pointer-events: none; }
+  /* The hidden textarea holds the whole manuscript. Wrapping it in 1px would make
+     one line per character, and the browser lays all of them out on every keystroke. */
+  #input { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: .01; resize: none; overflow: hidden; pointer-events: none; white-space: pre; }
+  body.plain-recovery #input { white-space: pre-wrap; }
   .ruby-run { position: absolute; width: 10px; color: var(--ink); pointer-events: none; }
   .ruby-warning { color: #9b540c; font-size: 10px; }
   #ruby-status[data-split-warning="true"] { color: #9b540c; }
