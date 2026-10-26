@@ -1,0 +1,182 @@
+/* Draft site, set vertically like a book. No external fonts, scripts or trackers.
+   Every column of text sits between two ruled lines: line heights, block sizes and
+   block margins inside a spread are whole multiples of --lh. */
+:root {
+  --washi: #f4efe4;
+  --paper: #fbf8f1;
+  --ink: #2b2925;
+  --muted: #6e685d;
+  --shu: #b0442c;          /* vermilion accent */
+  --shu-soft: #f3e1d8;
+  --rule: #e2d2c1;         /* ruled lines between columns */
+  --grid: #d9a594;         /* manuscript grid */
+  --serif: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  --sans: "Yu Gothic UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --lh: 36px;              /* column pitch = distance between ruled lines */
+  --rail: 84px;
+  --spread-h: min(648px, calc(100vh - 120px));
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--washi); color: var(--ink); font: 17px/1.9 var(--serif); }
+a { color: var(--shu); text-underline-offset: 4px; }
+img { max-width: 100%; height: auto; display: block; }
+.tcy { text-combine-upright: all; }
+
+.draft-banner { position: fixed; inset: 0 0 auto 0; z-index: 30; padding: 4px 12px; background: #3d3426; color: #f6ecd8; font: 12px/1.6 var(--sans); text-align: center; }
+
+/* Right-hand rail: brand and pages, set vertically. Latin letters stand upright. */
+.rail { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: var(--rail); padding: 44px 0 24px; background: var(--paper);
+  border-left: 1px solid var(--rule); writing-mode: vertical-rl; text-orientation: upright; display: flex; align-items: center; gap: 28px; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font: 600 24px/1 var(--serif); letter-spacing: .12em; }
+.brand-mark { width: 30px; height: 30px; border: 2px solid var(--ink); border-radius: 4px; background:
+  linear-gradient(90deg, transparent 0 30%, var(--grid) 30% 33%, transparent 33% 64%, var(--grid) 64% 67%, transparent 67%),
+  linear-gradient(var(--grid) 1px, transparent 1px) 0 2px / 100% 33%, var(--paper); }
+.tentative { font: 11px/1 var(--sans); color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 8px 3px; letter-spacing: 0; }
+.rail nav { display: flex; gap: 22px; font-size: 15px; letter-spacing: .08em; }
+.rail nav a { color: var(--muted); text-decoration: none; padding-inline: 4px; border-inline-start: 2px solid transparent; }
+.rail nav a:hover, .rail nav a[aria-current="page"] { color: var(--ink); border-inline-start-color: var(--shu); }
+
+main { padding: 56px calc(var(--rail) + 32px) 24px 32px; }
+
+/* A spread is one vertical page read right to left, on ruled paper. The rules are
+   drawn every --lh from the right edge of the content box and scroll with the text
+   (background-attachment: local) when a page is wider than the screen. */
+.spread, .pages { writing-mode: vertical-rl; text-orientation: upright; width: 100%; height: var(--spread-h); max-width: 1120px; margin: 0 auto 44px;
+  padding: 36px var(--lh); overflow-x: auto; overflow-y: hidden; background-color: var(--paper); border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2412;
+  background-image: repeating-linear-gradient(to left, transparent 0 calc(var(--lh) - 1px), var(--rule) calc(var(--lh) - 1px) var(--lh));
+  background-origin: content-box; background-clip: content-box; background-attachment: local; line-height: var(--lh); scrollbar-width: thin; }
+/* A section longer than a phone screen is written as several pages. On a wide screen
+   they run on as one spread; only a phone stacks them (see the media query). */
+.pages > .spread { display: contents; }
+/* A sheet is only as wide as its text (at least half the page), so a short section is
+   not a mostly empty sheet. */
+.spread, .pages { width: fit-content; min-width: min(100%, 560px); margin-inline: auto; }
+.hero { width: 100%; }
+.spread * { margin-block: 0; }
+/* Nothing trails the last column, so a full page does not scroll sideways. */
+.spread > :last-child { margin-block-end: 0; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: .06em; }
+/* A heading stays inside one column (two columns when it has a line break). */
+h2 { font-size: 26px; line-height: var(--lh); margin-block-end: var(--lh); }
+/* The vermilion mark is positioned so it never widens the column. */
+h2 { position: relative; padding-top: 26px; }
+h2::before { content: ""; position: absolute; top: 4px; right: 12px; width: 12px; height: 12px; background: var(--shu); }
+h3 { font-size: 18px; line-height: var(--lh); color: var(--shu); }
+p, li, dt, dd, summary, figcaption { line-height: var(--lh); }
+p { text-indent: 1em; }
+.lead { font-size: 19px; text-indent: 0; }
+.spaced { margin-block-end: var(--lh); }
+.key { color: var(--shu); font-weight: 600; }
+.small { font-size: 14px; color: var(--muted); text-indent: 0; }
+ul { padding-inline-start: 1.6em; }
+/* Numbers are kanji written into the text, so they sit upright in the column like
+   every other character (a list marker would lie on its side). */
+ol { list-style: none; padding: 0; counter-reset: item; }
+ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "　"; color: var(--shu); font-weight: 600; }
+/* Items led by a word in vermilion, each starting a new column. */
+.plain { list-style: none; padding: 0; }
+.note { padding: 12px 0; background: var(--shu-soft); border-top: 3px solid var(--shu); text-indent: 0; }
+.todo { background: #fde3dc; color: #8a2f1c; font-family: var(--sans); font-size: .82em; }
+.ui, kbd { font-family: var(--sans); font-size: .86em; padding: 3px 0; border: 1px solid #d8cbb9; border-radius: 4px; background: #fff; }
+
+/* Hero title: one manuscript square per character, two ruled columns per title column. */
+.genko-title { --cell: 60px; display: flex; flex-direction: column; font-size: 44px; letter-spacing: 0; margin-block-end: var(--lh); }
+.genko-title .col { display: flex; align-items: center; block-size: calc(var(--lh) * 2); }
+.genko-title .col span { inline-size: var(--cell); block-size: var(--cell); line-height: calc(var(--cell) - 2px); text-align: center;
+  border: 1px solid var(--grid); margin-inline-start: -1px; background: #fffdf8; }
+.genko-title .col span:first-child { margin-inline-start: 0; }
+
+/* Badges and buttons: each sits inside whole columns, so the text after them stays on the rules. */
+.badges { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0 10px; margin-block-end: var(--lh); }
+.badges li { block-size: calc(var(--lh) - 6px); margin-block: 3px; padding-inline: 12px; border: 1px solid var(--shu); color: var(--shu);
+  font-size: 15px; line-height: calc(var(--lh) - 8px); }
+.buttons { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-end: var(--lh); }
+.button { display: inline-block; block-size: calc(var(--lh) * 2 - 8px); margin-block: 4px; padding-inline: 16px; border: 1px solid var(--ink);
+  line-height: calc(var(--lh) * 2 - 10px); background: var(--ink); color: var(--paper); text-decoration: none; font-size: 16px; letter-spacing: .1em; text-indent: 0; }
+.button:hover { background: var(--shu); border-color: var(--shu); color: #fff; }
+.button.quiet { background: transparent; color: var(--ink); }
+.button.quiet:hover { color: #fff; }
+.button[aria-disabled="true"] { background: #a69c8c; border-color: #a69c8c; cursor: not-allowed; }
+
+/* Short items side by side (in vertical-rl a column flex runs right to left). */
+.items { display: flex; flex-direction: column; flex-wrap: wrap; }
+.item { margin-block-end: var(--lh); }
+.item p { text-indent: 0; }
+
+/* Collapsible details and tables: no borders on the block axis, so widths stay whole columns. */
+details { padding-block: 0; padding-inline: .8em; background: #fff; box-shadow: inset 0 0 0 1px var(--rule); }
+summary { cursor: pointer; color: var(--shu); font-weight: 600; }
+details p { text-indent: 0; }
+table { border-collapse: separate; border-spacing: 0; font-size: 15px; margin-block-end: var(--lh); }
+th, td { padding: 12px 0; line-height: var(--lh); vertical-align: top; background: #fff; box-shadow: inset 0 0 0 .5px var(--rule); }
+th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(--paper); }
+
+/* Images stay horizontal, with a vertical caption on the right. */
+.plate { max-width: 1120px; margin: 0 auto 44px; display: flex; flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 22px; }
+.plate img, .plate video { width: min(820px, 100%); height: auto; border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2418; }
+.plate figcaption { writing-mode: vertical-rl; text-orientation: upright; font-size: 14px; color: var(--muted); max-height: 520px; }
+
+/* Source pages: code reads horizontally, coloured at build time, wrapped so a phone
+   never scrolls sideways. */
+.code-page { max-width: 1120px; margin: 0 auto 44px; padding: 28px 32px; background: var(--paper); border: 1px solid var(--rule); font: 15px/1.8 var(--sans); }
+.code-page h1 { font: 600 20px/1.5 var(--sans); letter-spacing: 0; margin: 0 0 12px; overflow-wrap: anywhere; }
+.code-page p { margin: 0 0 12px; }
+.code-page code { font-family: Consolas, "BIZ UDGothic", monospace; font-size: .92em; }
+.crumb { font-size: 13px; color: var(--muted); }
+.download { font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+.files { border-collapse: collapse; font-size: 13px; width: 100%; }
+.files th, .files td { text-align: left; padding: 6px 10px; overflow-wrap: anywhere; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.files .num { text-align: right; white-space: nowrap; }
+.files .sha { font-family: Consolas, monospace; font-size: 11px; color: var(--muted); word-break: break-all; }
+pre.code { margin: 0; padding: 12px 0; background: #fffdf8; border: 1px solid var(--rule); font: 13px/1.65 Consolas, "BIZ UDGothic", "Yu Gothic", monospace;
+  white-space: pre-wrap; overflow-wrap: anywhere; counter-reset: line; tab-size: 2; }
+pre.code .l { display: block; position: relative; padding: 0 12px 0 4.4em; min-height: 1.65em; }
+pre.code .l::before { counter-increment: line; content: counter(line); position: absolute; left: 0; width: 3.4em; text-align: right; color: #b7ab98; user-select: none; }
+pre.code .c { color: #7b8a6e; font-style: italic; }
+pre.code .s { color: #a8462c; }
+pre.code .k { color: #3d4f9a; font-weight: 600; }
+pre.code .n { color: #8a5a00; }
+pre.code .t { color: #2f6f73; }
+pre.code .a { color: #7a3f8f; }
+
+/* Colophon (okuzuke): each item is its own column. */
+footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
+.colophon { writing-mode: vertical-rl; text-orientation: upright; width: 100%; max-width: 1120px; height: 240px; margin: 0 auto; padding: 24px 32px; overflow-x: auto;
+  font-size: 14px; line-height: var(--lh); color: var(--muted); border-top: 3px double var(--rule); border-bottom: 3px double var(--rule); }
+.colophon > * { display: block; }
+.colophon .title { color: var(--ink); font-size: 17px; font-weight: 600; }
+.colophon .sub { margin-block-end: var(--lh); }
+.colophon a { color: var(--muted); text-decoration: none; }
+.colophon a:hover, .colophon a[aria-current="page"] { color: var(--ink); }
+.colophon .copy { margin-block-start: var(--lh); }
+
+@media (max-width: 760px) {
+  /* Pages are written to fit 360px wide and 504px tall without sideways scrolling. */
+  :root { --rail: 0px; --lh: 32px; --spread-h: 504px; }
+  body { font-size: 16px; }
+  .rail { position: sticky; top: 22px; bottom: auto; width: auto; height: auto; padding: 10px 14px; writing-mode: horizontal-tb; flex-wrap: wrap; gap: 6px 18px;
+    border-left: 0; border-bottom: 1px solid var(--rule); justify-content: space-between; }
+  .brand { font-size: 19px; letter-spacing: .06em; }
+  .tentative { padding: 3px 8px; }
+  .rail nav { gap: 14px; font-size: 13px; }
+  .rail nav a { padding: 2px 0; border: 0; border-bottom: 2px solid transparent; }
+  .rail nav a[aria-current="page"] { border-bottom-color: var(--shu); }
+  main { padding: 34px 12px 12px; }
+  footer { padding: 0 12px 32px; }
+  .spread { width: 100%; min-width: 0; padding: 24px calc(var(--lh) / 2); margin-bottom: 28px; }
+  [id] { scroll-margin-top: 96px; }  /* clear the sticky menu when a link jumps here */
+  .pages { writing-mode: horizontal-tb; display: flex; flex-direction: column; gap: 12px; width: auto; height: auto; padding: 0; margin-bottom: 28px;
+    overflow: visible; background: none; border: 0; box-shadow: none; }
+  .pages > .spread { display: block; margin: 0; }
+  h2 { font-size: 22px; letter-spacing: .04em; }  /* 18 characters fit one column */
+  .lead { font-size: 17px; }
+  .plate { flex-direction: column; align-items: center; }
+  .plate figcaption { writing-mode: horizontal-tb; }
+  .code-page { padding: 16px 12px; }
+  pre.code { font-size: 12px; }
+  pre.code .l { padding-left: 3.6em; }
+  pre.code .l::before { width: 2.8em; }
+  .colophon { height: 330px; padding: 20px 16px; }
+}

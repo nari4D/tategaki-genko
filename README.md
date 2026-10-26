@@ -8,6 +8,10 @@ Node.js 22以降で次のコマンドを実行すると、`chrome-extension` フ
 
     node scripts/build-chrome-extension.cjs
 
+## 紹介サイト
+
+このリポジトリには、紹介サイト（https://tategaki-genko.pages.dev）の元ファイル（`site/`）も入っています。`node scripts/build-site.cjs` を実行すると、`site/public` フォルダーにサイトが書き出されます。
+
 ## ライセンス
 
 〔未定〕。同梱の書体（クレー One、よもぎ）はSIL Open Font License 1.1、見本の作品は青空文庫の取り扱い規準に従います。
