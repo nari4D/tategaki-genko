@@ -8,45 +8,34 @@
   const FONT_OPTIONS = {
   "mincho": {
     "label": "游明朝",
-    "css": "\"Yu Mincho\", \"Hiragino Mincho ProN\", \"Noto Serif CJK JP\", serif",
-    "word": "Yu Mincho"
+    "css": "\"Yu Mincho\", \"Hiragino Mincho ProN\", \"Noto Serif CJK JP\", serif"
   },
   "gothic": {
     "label": "游ゴシック",
-    "css": "\"Yu Gothic\", \"Hiragino Kaku Gothic ProN\", \"Noto Sans CJK JP\", sans-serif",
-    "word": "Yu Gothic"
+    "css": "\"Yu Gothic\", \"Hiragino Kaku Gothic ProN\", \"Noto Sans CJK JP\", sans-serif"
   },
   "biz-mincho": {
     "label": "BIZ UD明朝",
-    "css": "\"BIZ UDMincho Medium\", \"BIZ UDMincho\", \"Yu Mincho\", serif",
-    "word": "BIZ UDMincho Medium"
+    "css": "\"BIZ UDMincho Medium\", \"BIZ UDMincho\", \"Yu Mincho\", serif"
   },
   "kyokasho": {
     "label": "UDデジタル教科書体",
-    "css": "\"UD Digi Kyokasho N\", \"Yu Mincho\", serif",
-    "word": "UD Digi Kyokasho N"
+    "css": "\"UD Digi Kyokasho N\", \"Yu Mincho\", serif"
   },
   "shippori-b1": {
     "label": "しっぽり明朝B1",
-    "css": "\"Shippori Mincho B1\", \"Yu Mincho\", serif",
-    "word": "Shippori Mincho B1"
+    "css": "\"Shippori Mincho B1\", \"Yu Mincho\", serif"
   },
   "klee-one": {
     "label": "クレー One",
-    "css": "\"Klee One\", \"Yu Mincho\", serif",
-    "word": "Klee One"
+    "css": "\"Klee One\", \"Yu Mincho\", serif"
   },
   "yomogi": {
     "label": "よもぎ",
-    "css": "\"Yomogi\", \"Yu Mincho\", serif",
-    "word": "Yomogi"
+    "css": "\"Yomogi\", \"Yu Mincho\", serif"
   }
 };
   const normalizeFont = value => Object.prototype.hasOwnProperty.call(FONT_OPTIONS, value) ? value : value === 'biz-gothic' ? 'gothic' : 'mincho';
-  function fontFromWordNames(names) {
-    if (!names.length || !names.every(name => name === names[0])) return 'mincho';
-    return Object.keys(FONT_OPTIONS).find(key => FONT_OPTIONS[key].word === names[0]) || (names[0] === 'BIZ UDGothic' ? 'gothic' : 'mincho');
-  }
   let COMMA_FONT = '20px ' + FONT_OPTIONS.mincho.css;
   const commaMeasureContext = document.createElement('canvas').getContext('2d');
   const columnRight = column => column * (CELL + GAP) + (column >= COLS / 2 ? CENTER_GAP : 0);
@@ -255,9 +244,8 @@
   // `projects` only validates stored and imported data, so an existing library of
   // up to 200 still loads and saves; new manuscripts (samples included) stop at
   // `newProjects`. Ruby-heavy prose (e.g. Izumi Kyoka) has about 25 rubies a page,
-  // so 100 pages need room for well over 2,000. A Word file may carry pictures, so
-  // it may be larger than other files; only its text XML is expanded (20 MB cap).
-  const SAFETY = Object.freeze({ fileBytes: 10000000, wordBytes: 50000000, textUnits: 40000, pages: 100,
+  // so 100 pages need room for well over 2,000.
+  const SAFETY = Object.freeze({ fileBytes: 10000000, textUnits: 40000, pages: 100,
     projects: 200, newProjects: 30, history: 50, rubies: 5000, archiveUnits: 1000000 });
   let originalStored = null, lastStored = null, storageProtected = false;
   let unsavedChanges = false, libraryRevision = 0, readTicket = 0, pendingRead = null;
@@ -340,17 +328,6 @@
     if (library.projects.length + count <= SAFETY.newProjects) return true;
     operationProblem('原稿は30件までです。必要な原稿をJSONで保存してから、不要な原稿を削除してください。');
     return false;
-  }
-  const wordCrcTable = Array.from({ length: 256 }, (_, n) => {
-    for (let bit = 0; bit < 8; bit++) n = n & 1 ? 0xedb88320 ^ n >>> 1 : n >>> 1;
-    return n >>> 0;
-  });
-  function verifyWordBytes(bytes, size, expectedCrc) {
-    if (bytes.length !== size) throw Error('Word本文の展開サイズが一致しません。');
-    let crc = 0xffffffff;
-    for (const byte of bytes) crc = wordCrcTable[(crc ^ byte) & 255] ^ crc >>> 8;
-    if (((crc ^ 0xffffffff) >>> 0) !== expectedCrc) throw Error('Word本文のチェックサムが一致しません。');
-    return bytes;
   }
   function protectOversizedRender(error) {
     renderBlocked = true;
@@ -490,7 +467,7 @@
     }
     return result;
   })(new Map());
-  // RUBY_MODEL_START: UTF-16 offsets match textarea selection and DOCX text.
+  // RUBY_MODEL_START: UTF-16 offsets match the textarea selection.
   function normalizeRubies(text, items = []) {
     if (!Array.isArray(items)) throw new Error('ルビのデータが不正です。');
     if (items.length > SAFETY.rubies || items.some(item => typeof item?.text !== 'string' || item.text.length > 200) ||
@@ -1840,83 +1817,6 @@
     return title;
   }
   const safeFilename = title => title.replace(/[\\/:*?"<>|]/g, '_');
-  const xmlEscape = value => value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-  function wordDocument(body, rubies = [], font = 'mincho') {
-    const plain = body.replace(/\r\n?/g, '\n');
-    const annotations = rebaseRubies(body, plain, rubies);
-    const family = FONT_OPTIONS[normalizeFont(font)].word;
-    const run = (value, size = 24) => '<w:r><w:rPr><w:rFonts w:eastAsia="' + family + '" w:ascii="' + family + '" w:hAnsi="' + family + '"/>' +
-      '<w:sz w:val="' + size + '"/><w:szCs w:val="' + size + '"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r>';
-    const ruby = (base, reading) => '<w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="distributeSpace"/>' +
-      '<w:hps w:val="12"/><w:hpsRaise w:val="24"/><w:hpsBaseText w:val="24"/><w:lid w:val="ja-JP"/>' +
-      '</w:rubyPr><w:rt>' + run(reading, 12) + '</w:rt><w:rubyBase>' + run(base) + '</w:rubyBase></w:ruby></w:r>';
-    let offset = 0, annotationIndex = 0;
-    const content = plain.split('\n').map(line => {
-      let cursor = 0, xml = '';
-      while (annotations[annotationIndex] && annotations[annotationIndex].start < offset + line.length) {
-        const item = annotations[annotationIndex++];
-        xml += run(line.slice(cursor, item.start - offset));
-        xml += ruby(plain.slice(item.start, item.end), item.text);
-        cursor = item.end - offset;
-      }
-      xml += run(line.slice(cursor)); offset += line.length + 1;
-      return '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>' + xml + '</w:p>';
-    }).join('');
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-      '<w:body>' + content + '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' +
-      '<w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850" w:header="420" w:footer="420" w:gutter="0"/>' +
-      '<w:textDirection w:val="tbRl"/><w:docGrid w:type="linesAndChars" w:linePitch="480"/></w:sectPr></w:body></w:document>';
-  }
-  function zipStore(files) {
-    const encoder = new TextEncoder();
-    const chunks = [], central = [];
-    let offset = 0;
-    const crcTable = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-      crcTable[n] = c >>> 0;
-    }
-    const crc32 = bytes => {
-      let c = 0xffffffff;
-      for (const byte of bytes) c = crcTable[(c ^ byte) & 255] ^ (c >>> 8);
-      return (c ^ 0xffffffff) >>> 0;
-    };
-    for (const [path, content] of files) {
-      const filename = encoder.encode(path), data = encoder.encode(content), crc = crc32(data);
-      const local = new Uint8Array(30 + filename.length);
-      const l = new DataView(local.buffer);
-      l.setUint32(0, 0x04034b50, true); l.setUint16(4, 20, true);
-      l.setUint16(6, 0x0800, true); l.setUint32(14, crc, true);
-      l.setUint32(18, data.length, true); l.setUint32(22, data.length, true);
-      l.setUint16(26, filename.length, true); local.set(filename, 30);
-      chunks.push(local, data);
-      const record = new Uint8Array(46 + filename.length);
-      const v = new DataView(record.buffer);
-      v.setUint32(0, 0x02014b50, true); v.setUint16(4, 20, true); v.setUint16(6, 20, true);
-      v.setUint16(8, 0x0800, true); v.setUint32(16, crc, true);
-      v.setUint32(20, data.length, true); v.setUint32(24, data.length, true);
-      v.setUint16(28, filename.length, true); v.setUint32(42, offset, true);
-      record.set(filename, 46); central.push(record);
-      offset += local.length + data.length;
-    }
-    const centralLength = central.reduce((sum, item) => sum + item.length, 0);
-    const end = new Uint8Array(22), e = new DataView(end.buffer);
-    e.setUint32(0, 0x06054b50, true);
-    e.setUint16(8, central.length, true); e.setUint16(10, central.length, true);
-    e.setUint32(12, centralLength, true); e.setUint32(16, offset, true);
-    return new Blob([...chunks, ...central, end], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-  }
-  function makeDocx(body, rubies = [], font = 'mincho') {
-    return zipStore([
-      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
-      ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
-      ['word/document.xml', wordDocument(body, rubies, font)]
-    ]);
-  }
   function saveText() {
     const title = downloadTitle();
     if (!title) return;
@@ -1925,14 +1825,6 @@
     const blob = new Blob(['\uFEFF', body], { type: 'text/plain;charset=utf-8' });
     if (blob.size > 2000000) { alert('ファイルが2MBを超えています。'); return; }
     downloadBlob(blob, filename);
-    return true;
-  }
-  function saveWord() {
-    const title = downloadTitle();
-    if (!title) return;
-    const blob = makeDocx(input.value, activeProject().rubies || [], activeProject().font);
-    if (blob.size > 2000000) { alert('ファイルが2MBを超えています。'); return; }
-    downloadBlob(blob, safeFilename(title) + '.docx');
     return true;
   }
   let saveFeedbackEpoch = 0;
@@ -1944,7 +1836,7 @@
   function signalSaveStart(format) {
     const button = document.getElementById('save-' + format), epoch = saveFeedbackEpoch;
     button.classList.add('save-started');
-    document.getElementById('save-feedback').textContent = ({ json: 'JSON', txt: 'TXT', docx: 'Word' }[format]) + 'のダウンロードを開始しました。';
+    document.getElementById('save-feedback').textContent = ({ json: 'JSON', txt: 'TXT' }[format]) + 'のダウンロードを開始しました。';
     setTimeout(() => { if (epoch === saveFeedbackEpoch) clearSaveFeedback(); }, 1200);
   }
   function saveSelectedFile(format = 'json') {
@@ -1956,11 +1848,10 @@
       if (renderBlocked) { operationProblem('紙面表示が停止しているため印刷できません。JSONで保存するか、本文を分けてください。'); return; }
       requestManuscriptPrint(); return;
     }
-    const saveFile = { json: saveBackup, txt: saveText, docx: saveWord }[format];
+    const saveFile = { json: saveBackup, txt: saveText }[format];
     if (saveFile?.()) signalSaveStart(format);
     } catch (error) { operationProblem('ファイル保存を開始できませんでした。' + error.message); }
   }
-  // Word output is not offered: its layout in Word cannot be verified.
   for (const format of ['json', 'txt', 'pdf']) {
     document.getElementById('save-' + format).addEventListener('click', () => saveSelectedFile(format));
   }
@@ -1986,131 +1877,13 @@
     const file = event.target.files[0]; event.target.value = '';
     if (file) return openTextFile(file);
   });
-  async function readWordXml(file) {
-    if (file.size > SAFETY.wordBytes) throw new Error(SAFETY.wordBytes / 1000000 + 'MB以下のWordファイルを選んでください。');
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const view = new DataView(bytes.buffer);
-    let end = -1;
-    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
-      if (view.getUint32(i, true) === 0x06054b50 && i + 22 + view.getUint16(i + 20, true) === bytes.length) { end = i; break; }
-    }
-    if (end < 0) throw new Error('有効な.docxファイルではありません。');
-    const count = view.getUint16(end + 10, true);
-    let offset = view.getUint32(end + 16, true);
-    const decoder = new TextDecoder();
-    for (let i = 0; i < count; i++) {
-      if (offset + 46 > bytes.length || view.getUint32(offset, true) !== 0x02014b50) throw new Error('Wordファイルが破損しています。');
-      const flags = view.getUint16(offset + 8, true), method = view.getUint16(offset + 10, true);
-      const expectedCrc = view.getUint32(offset + 16, true);
-      const size = view.getUint32(offset + 20, true), expandedSize = view.getUint32(offset + 24, true);
-      const length = view.getUint16(offset + 28, true);
-      const next = offset + 46 + length + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
-      if (next > bytes.length) throw new Error('Wordファイルが破損しています。');
-      const path = decoder.decode(bytes.subarray(offset + 46, offset + 46 + length));
-      if (path === 'word/document.xml') {
-        if (flags & 1) throw new Error('パスワードで保護されたWordは読み込めません。');
-        if (expandedSize > 20000000) throw new Error('本文データが大きすぎます。');
-        const local = view.getUint32(offset + 42, true);
-        if (local + 30 > bytes.length || view.getUint32(local, true) !== 0x04034b50) throw new Error('Wordファイルが破損しています。');
-        const dataStart = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
-        if (dataStart + size > bytes.length) throw new Error('Wordファイルが破損しています。');
-        const data = bytes.subarray(dataStart, dataStart + size);
-        if (method === 0) return decoder.decode(verifyWordBytes(data, expandedSize, expectedCrc));
-        if (method !== 8) throw new Error('このWordの圧縮形式には対応していません。');
-        const reader = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
-        const chunks = []; let total = 0;
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            total += value.length;
-            if (total > 20000000) { await reader.cancel(); throw new Error('本文データが大きすぎます。'); }
-            chunks.push(value);
-          }
-        } finally { reader.releaseLock(); }
-        const expanded = new Uint8Array(await new Blob(chunks).arrayBuffer());
-        return decoder.decode(verifyWordBytes(expanded, expandedSize, expectedCrc));
-      }
-      offset = next;
-    }
-    throw new Error('Wordの本文が見つかりません。');
-  }
-  function wordPlainText(xml, filename) {
-    if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw Error('外部定義を含むWord本文は読み込めません。');
-    const doc = new DOMParser().parseFromString(xml, 'application/xml');
-    if (doc.getElementsByTagName('parsererror').length) throw new Error('Wordの本文を解析できません。');
-    const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-    const body = doc.getElementsByTagNameNS(ns, 'body')[0];
-    if (!body) throw new Error('Wordの本文が見つかりません。');
-    const paragraphs = [...body.getElementsByTagNameNS(ns, 'p')];
-    const rubies = [];
-    let paragraphOffset = 0;
-    const lines = paragraphs.map(p => {
-      let text = '';
-      const walk = node => {
-        if (node.namespaceURI === ns) {
-          if (node.localName === 'del') return;
-          if (node.localName === 'ruby') {
-            const base = [...node.childNodes].find(child => child.namespaceURI === ns && child.localName === 'rubyBase');
-            const rt = [...node.childNodes].find(child => child.namespaceURI === ns && child.localName === 'rt');
-            if (!base) throw new Error('Wordのルビの親文字が見つかりません。');
-            const start = paragraphOffset + text.length;
-            walk(base);
-            const reading = rt ? [...rt.getElementsByTagNameNS(ns, 't')].map(item => item.textContent).join('') : '';
-            if (reading.trim() && paragraphOffset + text.length > start) rubies.push({ start, end: paragraphOffset + text.length, text: reading });
-            return;
-          }
-          if (node.localName === 't') { text += node.textContent; return; }
-          if (node.localName === 'tab') { text += '\t'; return; }
-          if (node.localName === 'br' || node.localName === 'cr') { text += '\n'; return; }
-        }
-        for (const child of node.childNodes) walk(child);
-      };
-      walk(p); paragraphOffset += text.length + 1; return text;
-    });
-    let title = filename.replace(/\.docx$/i, '');
-    const first = paragraphs[0];
-    const style = first?.getElementsByTagNameNS(ns, 'pStyle')[0]?.getAttributeNS(ns, 'val');
-    const alignment = first?.getElementsByTagNameNS(ns, 'jc')[0]?.getAttributeNS(ns, 'val');
-    const isTitle = /^(title|タイトル)$/i.test(style || '') || (alignment === 'center' && first?.getElementsByTagNameNS(ns, 'b').length);
-    let removed = 0;
-    if (lines[0]?.trim() && isTitle) { removed = lines[0].length + 1; title = lines.shift().trim(); }
-    const text = lines.join('\n');
-    const retained = rubies.filter(item => item.start >= removed).map(item => ({ ...item, start: item.start - removed, end: item.end - removed }));
-    // Preserve our document-wide font on round trip; mixed Word formatting is not imported.
-    const fontNames = [...body.getElementsByTagNameNS(ns, 'rFonts')].map(node => node.getAttributeNS(ns, 'eastAsia'));
-    const font = fontFromWordNames(fontNames);
-    return { title, text, rubies: normalizeRubies(text, retained), font };
-  }
-  async function openWordFile(file) {
-    try {
-      const read = beginRead(file, SAFETY.wordBytes);
-      const loaded = wordPlainText(await readWordXml(file), file.name);
-      checkRead(read);
-      textWithinBounds(loaded.text);
-      if (!prepareImportDraft()) return;
-      if (input.value && !confirm('現在の原稿をWordの本文で置き換えますか？ 現在の版は履歴に残します。')) return;
-      addVersion(activeProject(), '読込前');
-      name.value = loaded.title;
-      Object.assign(activeProject(), { text: loaded.text, rubies: loaded.rubies, font: loaded.font });
-      fontSelect.value = loaded.font; input.value = loaded.text; input.setSelectionRange(0, 0);
-      save(); refreshVersions(); operationProblem('');
-      document.getElementById('file-status').textContent = 'Wordを開きました。';
-      window.scrollTo(0, 0);
-    } catch (error) { operationProblem('Wordを開けませんでした。' + error.message); }
-  }
-  document.getElementById('import-word').addEventListener('change', event => {
-    const file = event.target.files[0]; event.target.value = '';
-    if (file) return openWordFile(file);
-  });
   document.getElementById('import-file').addEventListener('change', event => {
     const file = event.target.files[0]; event.target.value = '';
     if (!file) return;
     const extension = file.name.toLowerCase().split('.').pop();
     if (extension === 'json') return openJsonFile(file);
-    if (extension === 'docx') return openWordFile(file);
     if (extension === 'txt') return openTextFile(file);
-    alert('原稿（.json）・Word（.docx）・テキスト（.txt）を選んでください。');
+    alert('原稿（.json）・テキスト（.txt）を選んでください。');
   });
   // Only the Apps Script host provides this bridge. Local HTML never claims a cloud save.
   window.genkoBoot.stage('保存機能の確認');
