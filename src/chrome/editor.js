@@ -176,7 +176,7 @@
   }
   function createSampleLibrary() {
     const projects = SAMPLE_CATALOG.map(sampleProject);
-    return { version: 2, sampleCatalogVersion: 4, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'left', projects };
+    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'left', projects };
   }
   function unchangedLegacySample(project) {
     if (project.history.length || project.driveLink || project.protected === true) return false;
@@ -185,10 +185,10 @@
       JSON.stringify(project.rubies || []) === JSON.stringify(example.rubies || []));
   }
   function curateSampleLibrary(stored) {
-    if (stored.sampleCatalogVersion >= 4) return stored;
+    if (stored.sampleCatalogVersion >= 5) return stored;
     if (stored.sampleCatalogVersion >= 1) {
       const previousCatalog = stored.sampleCatalogVersion;
-      stored.sampleCatalogVersion = 4;
+      stored.sampleCatalogVersion = 5;
       // Append only the new work; never replace drafts or switch selection.
       const retired = ['check-punctuation', 'check-ruby'];
       if (!stored.projects.some(project => retired.includes(project.sampleId) || SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))) return stored;
@@ -198,7 +198,7 @@
         delete project.sampleId; delete project.sampleProtected;
         return true;
       });
-      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['check-layout', 4]]) {
+      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['check-layout', 4], ['guide', 5]]) {
         if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
         const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
         try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
@@ -217,7 +217,7 @@
     if (!stored.projects.some(project => LEGACY_SAMPLES.some(example => project.title === example.title))) {
       // Mark this in memory too, so an intentionally imported old sample is not
       // mistaken for pre-update clutter at the following restart.
-      stored.sampleCatalogVersion = 4;
+      stored.sampleCatalogVersion = 5;
       return stored;
     }
     const kept = stored.projects.filter(project => !unchangedLegacySample(project));
@@ -229,7 +229,7 @@
       kept.push(candidate);
     }
     stored.projects = orderStandardSamples(kept);
-    stored.sampleCatalogVersion = 4;
+    stored.sampleCatalogVersion = 5;
     if (!kept.some(project => project.id === stored.activeId)) stored.activeId = kept[0].id;
     sampleMigrationPending = true;
     return stored;

@@ -61,6 +61,7 @@ const previousSamples = [
 const retiredSamples = previousSamples.filter(sample => sample.sampleId.startsWith('check-'));
 const literatureOrder = [chumon.id, additionalLiterary.id, literary.id];
 const samples = [
+  { sampleId: 'guide', title: 'はじめに', font: 'mincho', ...unmark(require('../data/guide.cjs')) },
   ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id)),
   { sampleId: 'check-layout', title: '確認用：原稿用紙とふりがな', font: 'mincho', ...unmark(require('../data/manuscript-check.cjs')) }
 ];
