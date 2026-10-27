@@ -14,7 +14,7 @@
   --sans: "Yu Gothic UI", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --lh: 36px;              /* column pitch = distance between ruled lines */
   --rail: 84px;
-  --spread-h: min(648px, calc(100vh - 120px));
+  --spread-h: min(576px, calc(100vh - 96px));  /* a whole sheet fits the screen */
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -48,6 +48,8 @@ main { padding: 56px calc(var(--rail) + 32px) 24px 32px; }
 /* A section longer than a phone screen is written as several pages. On a wide screen
    they run on as one spread; only a phone stacks them (see the media query). */
 .pages > .spread { display: contents; }
+/* A heading that opens a later page of the run keeps a blank column before it. */
+.pages > .spread + .spread > h2:first-child { margin-block-start: var(--lh); }
 /* A sheet is only as wide as its text (at least half the page), so a short section is
    not a mostly empty sheet. */
 .spread, .pages { width: fit-content; min-width: min(100%, 560px); margin-inline: auto; }
@@ -170,16 +172,18 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
 .colophon a:hover, .colophon a[aria-current="page"] { color: var(--ink); }
 .colophon .copy { margin-block-start: var(--lh); }
 
-/* On a wide screen the sheets and pictures sit side by side, read right to left like
-   the pages of a book, so the page is not one long column of sheets. */
+/* On a wide screen a section and its picture (or two short sections) share a band,
+   read right to left like facing pages of a book; bands run top to bottom in reading
+   order, so the eye never zig-zags. A band too wide for the window wraps. */
 @media (min-width: 761px) {
-  main { display: flex; flex-flow: row-reverse wrap; justify-content: center; align-items: flex-start; gap: 44px 32px; max-width: 1680px; margin: 0 auto; }
-  main > .spread, main > .pages, main > .plate { margin: 0; }
+  main { max-width: 1680px; margin: 0 auto; }
+  .row { display: flex; flex-flow: row-reverse wrap; justify-content: center; align-items: center; gap: 44px 32px; margin-block-end: 56px; }
+  .row > .spread, .row > .pages, .row > .plate { margin: 0; }
   .spread, .pages { min-width: 0; max-width: 100%; }
   .hero { width: fit-content; }
   .plate { max-width: 100%; }
-  .plate img, .plate video { width: 600px; max-width: 100%; }
-  main > .code-page { flex-basis: 100%; margin: 0; }
+  .plate img, .plate video { width: clamp(520px, 40vw, 640px); max-width: 100%; }
+  main > .code-page { margin: 0 auto 44px; }
 }
 
 @media (max-width: 760px) {
@@ -193,6 +197,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .rail nav a { padding: 2px 0; border: 0; border-bottom: 2px solid transparent; }
   .rail nav a[aria-current="page"] { border-bottom-color: var(--shu); }
   main { padding: 34px 12px 12px; }
+  .row { display: contents; }
   footer { padding: 0 12px 32px; }
   .spread { width: 100%; min-width: 0; padding: 24px calc(var(--lh) / 2); margin-bottom: 28px; }
   [id] { scroll-margin-top: 96px; }  /* clear the sticky menu when a link jumps here */
@@ -201,9 +206,12 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .pages { writing-mode: horizontal-tb; display: block; width: auto; height: auto; padding: 0; margin-bottom: 28px; overflow: visible; background: var(--paper); }
   .pages > .spread { display: block; margin: 0; border: 0; box-shadow: none; }
   .pages > .spread + .spread { border-top: 1px solid var(--rule); }
+  .pages > .spread + .spread > h2:first-child { margin-block-start: 0; }
   .pages > .spread:not(:last-child) :is(.hang, .qa, .steps) > li:last-child { margin-block-end: 0; }
   h2 { font-size: 22px; letter-spacing: .04em; }  /* 18 characters fit one column */
   .lead { font-size: 17px; }
+  /* A phone cannot add a Chrome extension, so the hero keeps to its words. */
+  .hero .buttons { display: none; }
   .plate { flex-direction: column; align-items: center; }
   .plate figcaption { writing-mode: horizontal-tb; }
   .code-page { padding: 16px 12px; }
