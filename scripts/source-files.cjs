@@ -20,9 +20,9 @@ const version = fs.readFileSync(path.join(root, 'scripts', 'build-chrome-extensi
 
 // Files written for the published set only.
 const generated = {
-  'README.md': `# 縦書き原稿
+  'README.md': `# 縦書き原稿用紙
 
-パソコン版Chromeブラウザの拡張機能「縦書き原稿」のプログラム一式です（${version}）。
+パソコン版Chromeブラウザの拡張機能「縦書き原稿用紙」のプログラム一式です（${version}）。
 
 ## 拡張機能を作る
 

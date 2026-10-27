@@ -28,7 +28,7 @@ function render({ name, title, description, body, up = '' }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${name === 'index' && !up ? '縦書き原稿 — Chromeで書く縦書きの原稿用紙' : title + ' — 縦書き原稿'}</title>
+<title>${name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙'}</title>
 <meta name="description" content="${description}">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="${up}style.css">
@@ -36,13 +36,13 @@ function render({ name, title, description, body, up = '' }) {
 <body>
 <div class="draft-banner">下書き（未公開）。〔 〕と「要決定」の箇所は未確定です。</div>
 <header class="rail">
-<a class="brand" href="${up}index.html"><span class="brand-mark" aria-hidden="true"></span>縦書き原稿<span class="tentative">仮称</span></a>
+<a class="brand" href="${up}index.html"><span class="brand-mark" aria-hidden="true"></span>縦書き原稿用紙</a>
 <nav aria-label="サイト内">${nav.map(link).join('')}</nav>
 </header>
 <main>
 ${body.trim()}
 </main>
-<footer><div class="colophon"><span class="title">縦書き原稿（仮称）</span><span class="sub">パソコン版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">©〔作者名〕</span></div></footer>
+<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">パソコン版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">©〔作者名〕</span></div></footer>
 </body>
 </html>
 `;
@@ -73,7 +73,7 @@ const rows = set.map(([file, data]) => {
 fs.writeFileSync(path.join(out, 'source', zipName), zip(set));
 const zipSize = (fs.statSync(path.join(out, 'source', zipName)).size / 1048576).toFixed(1);
 fs.writeFileSync(path.join(out, 'source', 'index.html'), render({
-  name: 'source', up: '../', title: 'プログラム', description: '縦書き原稿のプログラム一式。',
+  name: 'source', up: '../', title: 'プログラム', description: '縦書き原稿用紙のプログラム一式。',
   body: `<article class="code-page">
 <h1>プログラム（${version}）</h1>
 <p>Chromeウェブストアで公開する拡張機能は、この一式から作ります。Node.js 22以降で <code>node scripts/build-chrome-extension.cjs</code> を実行すると、<code>chrome-extension</code> フォルダーに拡張機能が作られます。</p>
@@ -86,7 +86,7 @@ ${rows.join('\n')}
 for (const [file, data] of set.filter(([file]) => isText(file))) {
   const lines = highlight(data.toString('utf8').replace(/\r\n/g, '\n'), file);
   fs.writeFileSync(path.join(out, 'source', pageOf(file)), render({
-    name: 'source', up: '../', title: file, description: `縦書き原稿のプログラム：${file}`,
+    name: 'source', up: '../', title: file, description: `縦書き原稿用紙のプログラム：${file}`,
     body: `<article class="code-page">
 <p class="crumb"><a href="index.html">プログラム</a> ／ ${file}</p>
 <h1>${file}</h1>

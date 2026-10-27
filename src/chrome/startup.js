@@ -7,7 +7,7 @@
     status.hidden = false;
     if (typeof window.parent.genkoHostFail === "function") window.parent.genkoHostFail(String(error && error.message || error));
     status.setAttribute('role', 'alert');
-    status.textContent = 'Chrome試作版：原稿用紙の処理が停止しました。\n段階：' + phase +
+    status.textContent = '原稿用紙の処理が停止しました。\n段階：' + phase +
       '\nエラー：' + String(error && error.message || error || '詳細を取得できませんでした').slice(0, 1000) +
       '\nこの表示をそのままお知らせください。原稿データの削除は不要です。';
   }
@@ -21,7 +21,7 @@
   });
   window.addEventListener('unhandledrejection', function (event) { fail(event.reason); });
   setTimeout(function () {
-    if (!finished && !failed) status.textContent = 'Chrome試作版：起動が完了していません。\n段階：' + phase +
+    if (!finished && !failed) status.textContent = '起動が完了していません。\n段階：' + phase +
       '\nこの表示をそのままお知らせください。';
   }, 8000);
 })();

@@ -1114,7 +1114,7 @@
     // Setting the font again, even unchanged, makes the browser restyle every page.
     if (pages.style.getPropertyValue?.('--manuscript-font') !== selectedFont.css) pages.style.setProperty('--manuscript-font', selectedFont.css);
     COMMA_FONT = '20px ' + selectedFont.css;
-    const title = name.value.trim() || '縦書き原稿';
+    const title = name.value.trim() || '縦書き原稿用紙';
     if (document.title !== title) document.title = title;
     const currentRubies = composing ? rebaseRubies(activeProject().text, input.value, activeProject().rubies || []) : normalizeRubies(input.value, activeProject()?.rubies || []);
     const result = boundedLayout.result;

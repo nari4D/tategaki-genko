@@ -32,7 +32,6 @@ img { max-width: 100%; height: auto; display: block; }
 .brand-mark { width: 30px; height: 30px; border: 2px solid var(--ink); border-radius: 4px; background:
   linear-gradient(90deg, transparent 0 30%, var(--grid) 30% 33%, transparent 33% 64%, var(--grid) 64% 67%, transparent 67%),
   linear-gradient(var(--grid) 1px, transparent 1px) 0 2px / 100% 33%, var(--paper); }
-.tentative { font: 11px/1 var(--sans); color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 8px 3px; letter-spacing: 0; }
 .rail nav { display: flex; gap: 22px; font-size: 15px; letter-spacing: .08em; }
 .rail nav a { color: var(--muted); text-decoration: none; padding-inline: 4px; border-inline-start: 2px solid transparent; }
 .rail nav a:hover, .rail nav a[aria-current="page"] { color: var(--ink); border-inline-start-color: var(--shu); }
@@ -174,7 +173,6 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .rail { position: sticky; top: 22px; bottom: auto; width: auto; height: auto; padding: 10px 14px; writing-mode: horizontal-tb; flex-wrap: wrap; gap: 6px 18px;
     border-left: 0; border-bottom: 1px solid var(--rule); justify-content: space-between; }
   .brand { font-size: 19px; letter-spacing: .06em; }
-  .tentative { padding: 3px 8px; }
   .rail nav { gap: 14px; font-size: 13px; }
   .rail nav a { padding: 2px 0; border: 0; border-bottom: 2px solid transparent; }
   .rail nav a[aria-current="page"] { border-bottom-color: var(--shu); }

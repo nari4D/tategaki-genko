@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const extensionVersion = '0.2.29';
+const extensionVersion = '1.0.0';
 const src = path.join(root, 'src', 'chrome');
 const out = path.join(root, 'chrome-extension');
 fs.mkdirSync(path.join(out, 'icons'), { recursive: true });
@@ -49,11 +49,11 @@ for (const font of fonts) {
 const icons = Object.fromEntries([16, 32, 48, 128].map(size => [size, `icons/genko-${size}.png`]));
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({
   manifest_version: 3,
-  name: '縦書き原稿（試作版）',
+  name: '縦書き原稿用紙',
   version: extensionVersion,
   minimum_chrome_version: '116',
   description: 'アイコンから縦書き原稿用紙を開きます。ルビ・編集履歴・JSON保存に対応。原稿は端末内に保存します。',
-  action: { default_title: '縦書き原稿を開く', default_icon: icons },
+  action: { default_title: '縦書き原稿用紙を開く', default_icon: icons },
   icons,
   background: { service_worker: 'background.js' },
   content_security_policy: { extension_pages: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; connect-src 'none'; img-src 'self' data: blob:; frame-src 'none'; form-action 'none';" }
@@ -90,4 +90,4 @@ for (const size of [16, 32, 48, 128]) {
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', zlib.deflateSync(bytes)), chunk('IEND', Buffer.alloc(0))
   ]));
 }
-console.log('Chrome試作版を生成: ' + out + '（ブラウザの起動・操作なし）');
+console.log('拡張機能を生成: ' + out + '（ブラウザの起動・操作なし）');

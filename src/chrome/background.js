@@ -33,7 +33,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 });
 chrome.action.onClicked.addListener(() => {
   if (!opening) opening = openEditor().catch(error => {
-    console.error('縦書き原稿を開けませんでした。', error);
+    console.error('縦書き原稿用紙を開けませんでした。', error);
   }).finally(() => { opening = null; });
   return opening;
 });
