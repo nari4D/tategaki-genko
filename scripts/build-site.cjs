@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out 
 // The menu lists pages, never sections of a page. Contact and the terms page
 // are in the footer only.
 const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き']];
-const footer = [...nav, ['support', 'お問い合わせ'], ['legal', 'ご利用について・プライバシー']];
+const footer = [...nav, ['support', 'お問い合わせ'], ['legal', 'ご利用について']];
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'images'), { recursive: true });
@@ -60,7 +60,7 @@ function render({ name, title, description, body, up = '' }) {
 <main>
 ${body.trim()}
 </main>
-${name === 'try' && !up ? '' /* ためし書き ends with the demo */ : `<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">パソコン版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 〔作者名〕</span></div></footer>
+${name === 'try' && !up ? '' /* ためし書き ends with the demo */ : `<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">PC版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 〔作者名〕</span></div></footer>
 `}</body>
 </html>
 `;

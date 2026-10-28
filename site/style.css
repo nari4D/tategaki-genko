@@ -188,7 +188,7 @@ pre.code .a { color: #7a3f8f; }
 
 /* Colophon (okuzuke): each item is its own column. */
 footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
-.colophon { writing-mode: vertical-rl; text-orientation: upright; width: 100%; max-width: 1120px; height: 240px; margin: 0 auto; padding: 24px 32px; overflow-x: auto;
+.colophon { writing-mode: vertical-rl; text-orientation: upright; width: 100%; max-width: 1120px; height: 312px; margin: 0 auto; padding: 24px 32px; overflow-x: auto;
   font-size: 14px; line-height: var(--lh); color: var(--muted); border-top: 3px double var(--rule); border-bottom: 3px double var(--rule); }
 .colophon > * { display: block; }
 .colophon .title { color: var(--ink); font-size: 17px; font-weight: 600; }
@@ -261,6 +261,8 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .hero .buttons { display: none; }
   .hero .more { display: none; }
   .hero .narrow { display: block; }
+  /* Title, a blank column and four lines: nine columns fit a 360px screen. */
+  .hero { padding: 24px 12px; }
   .demo { display: none; }
   .spread.demo-phone { display: block; }
   .plate { flex-direction: column; align-items: center; }
@@ -271,5 +273,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   pre.code { font-size: 12px; }
   pre.code .l { padding-left: 3.6em; }
   pre.code .l::before { width: 2.8em; }
-  .colophon { height: 330px; padding: 20px 16px; }
+  .colophon { height: 330px; padding: 20px 14px; }
+  /* No blank column before the copyright, so the colophon fits a 360px screen. */
+  .colophon .copy { margin-block-start: 0; }
 }
