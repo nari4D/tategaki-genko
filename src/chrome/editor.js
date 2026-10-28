@@ -5,6 +5,8 @@
   // Each review edition has its own sample storage. Never migrate real manuscripts here.
   const CELL = 28, GAP = 12, CENTER_GAP = 16, ROWS = 20, COLS = 20, LIBRARY_KEY = 'tategaki-genko-chrome-library-v2';
   const ATTACHED_MARK_CENTER = CELL - 3;
+  // Widest Windows IME candidate list allowed for (the prediction list is about 240px).
+  const IME_LIST_WIDTH = 320;
   const FONT_OPTIONS = {
   "mincho": {
     "label": "游明朝",
@@ -1157,7 +1159,13 @@
       // left of it by a fixed amount at any paper scale. At +32 px the frame still
       // hid the column's right rule in the user's screen; +36 leaves it visible.
       // The list then covers columns already written, not the text being composed.
-      input.style.left = (sheetRect.right - columnRight(at.column) * displayScale + 36) + 'px';
+      // Where the list has no room on the right (the first columns near the edge of
+      // the window, or the ためし書き frame), Windows pushes it back over the column,
+      // so it opens on the left instead, over the columns still to be written.
+      const columnRightX = sheetRect.right - columnRight(at.column) * displayScale;
+      const columnLeftX = columnRightX - CELL * displayScale;
+      const roomOnRight = columnRightX + 2 + IME_LIST_WIDTH <= innerWidth;
+      input.style.left = (roomOnRight || columnLeftX < IME_LIST_WIDTH ? columnRightX + 36 : columnLeftX - IME_LIST_WIDTH) + 'px';
       input.style.top = (sheetRect.top + at.row * CELL * displayScale) + 'px';
     }
     countEl.textContent = result.characters.toLocaleString('ja-JP');
