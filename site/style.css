@@ -209,8 +209,11 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
      first columns on the right; blank columns part the title, the description,
      the pledge and the button. */
   .hero { width: calc(var(--lh) * 27 + 2px); }
+  /* A hero with only a few lines is as wide as its text and shares the band. */
+  .hero.short { width: fit-content; }
   .hero .genko-title { margin-block: 0 calc(var(--lh) * 2); }
-  .hero .lead { font-size: 20px; }
+  /* The lead stays in one column on a short screen, where the sheet is lower. */
+  .hero .lead { font-size: min(20px, calc((var(--spread-h) - 72px) / 25)); }
   .hero p:not(.lead, .pledge) { font-size: 18px; }
   .hero .pledge { font-size: 24px; margin-block-start: calc(var(--lh) * 3); }
   .hero .buttons { margin-block: calc(var(--lh) * 3) 0; }

@@ -52,7 +52,7 @@ function render({ name, title, description, body, up = '' }) {
 <link rel="stylesheet" href="${up}style.css">
 </head>
 <body>
-<div class="draft-banner">下書き（未公開）。〔 〕と「要決定」の箇所は未確定です。</div>
+<div class="draft-banner">下書き（未公開）。〔 〕の箇所は未確定です。</div>
 <header class="rail">
 <a class="brand" href="${up}index.html"><span class="brand-mark" aria-hidden="true"></span>縦書き原稿用紙</a>
 <nav aria-label="サイト内">${nav.map(link).join('')}</nav>
