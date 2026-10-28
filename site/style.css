@@ -99,6 +99,13 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 /* One-line items run column after column, like a list of specifications. */
 .hang.tight > li, .pages > .spread:not(:last-child) .hang.tight > li:last-child { margin-block-end: 0; }
 .pledge { font-size: 20px; font-weight: 600; color: var(--shu); }
+/* The hero's button stands in the middle of its column. */
+.hero .buttons { justify-content: center; }
+/* Questions: the question in vermilion, the answer right after it in the same column. */
+.faq > li { padding-inline-start: 1em; text-indent: -1em; }
+.faq .key { margin-inline-end: 1em; }
+/* A sheet that only carries a section title, beside that section's pictures. */
+.spread.title-slip { padding-block: 12px; }
 /* A step: its kanji number hangs, the text below it. */
 .step { text-indent: 0; padding-inline-start: 2em; text-indent: -2em; }
 .note { padding: 12px 0; background: var(--shu-soft); border-top: 3px solid var(--shu); text-indent: 0; }
@@ -144,7 +151,7 @@ th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(-
 /* Step pictures: smaller, the toolbar pictures one above the other, the caption is the step itself. */
 .plate.step .shots { display: flex; flex-direction: column; gap: 14px; }
 .plate.step { align-items: center; }
-.plate.step figcaption { font-size: 16px; color: var(--ink); line-height: 1.9; padding-inline-start: 2em; text-indent: -2em; max-height: 360px; }
+.plate.step figcaption { font-size: 16px; color: var(--ink); line-height: 1.9; padding-inline-start: 2em; text-indent: -2em; }
 
 /* Source pages: code reads horizontally, coloured at build time, wrapped so a phone
    never scrolls sideways. */
@@ -192,8 +199,14 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .hero { width: fit-content; }
   .plate { max-width: 100%; }
   .plate img, .plate video { width: clamp(520px, 40vw, 640px); max-width: 100%; }
-  .plate.step img { width: 290px; }
-  .plate.step > img { width: auto; }
+  .plate.step img { width: 260px; }
+  .plate.step > img.native { width: 260px; }
+  .row.steps { column-gap: 20px; }
+  /* Set the whole step vertically, caption on the right, so the figure is only as
+     wide as its picture and caption (a vertical caption inside a horizontal box
+     was sized as if it took two columns). */
+  .plate.step { writing-mode: vertical-rl; flex-direction: column-reverse; justify-content: flex-start; height: 440px; }
+  .plate.step .shots { writing-mode: horizontal-tb; }
   main > .code-page { margin: 0 auto 44px; }
 }
 
@@ -213,6 +226,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .spread { width: 100%; min-width: 0; padding: 24px calc(var(--lh) / 2); margin-bottom: 28px; }
   /* A short section is a slip as wide as its text, not a mostly empty sheet. */
   .spread.fit { width: fit-content; margin-inline: auto; }
+  .spread.title-slip { height: auto; }
   [id] { scroll-margin-top: 96px; }  /* clear the sticky menu when a link jumps here */
   /* The pages of a section are tiers (dan) of one sheet: one outer border, a thin rule
      between tiers, read top to bottom, each tier right to left. */
@@ -228,7 +242,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .plate { flex-direction: column; align-items: center; }
   .plate figcaption { writing-mode: horizontal-tb; }
   .plate.step img { width: auto; }
-  .plate.step figcaption { align-self: stretch; max-height: none; }
+  .plate.step figcaption { align-self: stretch; height: auto; }
   .code-page { padding: 16px 12px; }
   pre.code { font-size: 12px; }
   pre.code .l { padding-left: 3.6em; }
