@@ -1606,6 +1606,9 @@
     persist();
     name.focus();
   });
+  const noticesDialog = document.getElementById('notices-dialog');
+  document.getElementById('notices-open').addEventListener('click', () => noticesDialog.showModal());
+  document.getElementById('notices-close').addEventListener('click', () => noticesDialog.close());
   const deleteDialog = document.getElementById('delete-dialog');
   let deleteTargetId = null;
   document.getElementById('delete-project').addEventListener('click', () => {

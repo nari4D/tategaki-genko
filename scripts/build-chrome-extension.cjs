@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const extensionVersion = '1.0.3';
+const extensionVersion = '1.0.4';
 const src = path.join(root, 'src', 'chrome');
 const out = path.join(root, 'chrome-extension');
 fs.mkdirSync(path.join(out, 'icons'), { recursive: true });
@@ -36,16 +36,19 @@ for (const [file, source] of Object.entries(scripts)) {
   new vm.Script(source, { filename: file });
   fs.writeFileSync(path.join(out, file), source);
 }
-fs.writeFileSync(path.join(out, 'editor.html'), fill(read('editor.html'), '{{VERSION}}', extensionVersion));
-fs.writeFileSync(path.join(out, 'editor.css'), read('editor.css'));
-fs.writeFileSync(path.join(out, 'notices.txt'), notice);
+let notices = notice;
 for (const font of fonts) {
   const target = path.join(out, 'fonts', font.id);
   fs.mkdirSync(target, { recursive: true });
   for (const name of [font.stem + '.woff2', 'OFL.txt']) fs.copyFileSync(path.join(root, 'assets', 'fonts', font.id, name), path.join(target, name));
-  fs.appendFileSync(path.join(out, 'notices.txt'), '\n' + font.family + ': SIL Open Font License 1.1\n' +
-    '著作権表示と全文ライセンス：fonts/' + font.id + '/OFL.txt\nこのフォントにはアプリ独自の再配布禁止条件を付しません。\n');
+  notices += '\n' + font.family + ': SIL Open Font License 1.1\n' +
+    '著作権表示と全文ライセンス：fonts/' + font.id + '/OFL.txt\nこのフォントにはアプリ独自の再配布禁止条件を付しません。\n';
 }
+fs.writeFileSync(path.join(out, 'notices.txt'), notices);
+// The same text is shown in the app's 「作品と書体の出典」 dialog.
+const escapeHtml = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+fs.writeFileSync(path.join(out, 'editor.html'), fill(fill(read('editor.html'), '{{VERSION}}', extensionVersion), '{{NOTICES}}', escapeHtml(notices)));
+fs.writeFileSync(path.join(out, 'editor.css'), read('editor.css'));
 const icons = Object.fromEntries([16, 32, 48, 128].map(size => [size, `icons/genko-${size}.png`]));
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({
   manifest_version: 3,
