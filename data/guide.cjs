@@ -1,4 +1,4 @@
-// The bundled 「はじめに」 manuscript: how to use the app, opened first by new users.
+// The bundled 「はじめに」 manuscript: how to use the app, kept in the switcher.
 // What a writer needs first comes first (how much fits, where it is kept); the
 // edit history, rarely needed, comes last.
 // [[base|reading]] marks a ruby; 'きょう｜と' gives one reading per character.

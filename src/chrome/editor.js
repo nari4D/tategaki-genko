@@ -188,8 +188,9 @@
     showProject();
     return true;
   }
+  // The first start opens a blank manuscript; the samples wait in the switcher.
   function createSampleLibrary() {
-    const projects = SAMPLE_CATALOG.map(sampleProject);
+    const projects = [newProject(), ...SAMPLE_CATALOG.map(sampleProject)];
     return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', panelSideVersion: 1, projects };
   }
   function unchangedLegacySample(project) {
