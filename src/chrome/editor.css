@@ -114,17 +114,24 @@
   body.panel-hidden .side-stack { display: none; }
   body.panel-hidden .workspace { width: max-content; max-width: 100%; margin-inline: auto; }
   body.overview-mode #show-panel { display: none; }
-  body.overview-mode .side-stack { position: fixed; top: 18px; left: 18px; z-index: 40; margin: 0; }
-  body.panel-on-right.overview-mode .side-stack { left: auto; right: 18px; }
+  /* The overview's buttons sit in a band across the top, so scrolled pages pass under it unseen. */
+  body.overview-mode .side-stack { position: fixed; top: 0; left: 0; right: 0; z-index: 40; display: flex; width: auto; max-width: none; box-sizing: border-box; margin: 0; padding: 18px 18px 8px; background: #e9ece8; }
+  body.panel-on-right.overview-mode .side-stack { justify-content: flex-end; }
+  body.overview-mode .page-tools { width: 250px; }
   body.overview-mode aside { display: none; }
-  body.panel-hidden.overview-mode .side-stack { display: block; }
+  body.panel-hidden.overview-mode .side-stack { display: flex; }
   body.overview-mode .page-tools { margin: 0; padding: 0; }
   body.overview-mode .char-count { display: none; }
-  body.overview-mode .paper-scroll { position: fixed; inset: 0; z-index: 30; margin: 0; padding: 65px 24px 24px; overflow: auto; border: 0; border-radius: 0; background: #e9ece8; }
-  body.overview-mode #pages { direction: rtl; grid-template-columns: repeat(var(--overview-cols), max-content); justify-content: center; align-content: center; gap: 12px; min-height: calc(100vh - 89px); }
+  body.overview-mode .paper-scroll { position: fixed; inset: 0; z-index: 30; margin: 0; padding: 100px 24px 24px; overflow: auto; border: 0; border-radius: 0; background: #e9ece8; }
+  body.overview-mode #pages { direction: rtl; grid-template-columns: repeat(var(--overview-cols), max-content); justify-content: center; align-content: center; gap: 12px; min-height: calc(100vh - 124px); }
   body.overview-mode .page { direction: ltr; zoom: var(--overview-scale); cursor: pointer; }
   body.overview-mode .sheet { cursor: pointer; }
   body.overview-mode .cursor { display: none; }
+  /* The page number stays readable at any thumbnail size. */
+  body.overview-mode .page { position: relative; }
+  body.overview-mode .page-footer span:first-child { display: none; }
+  body.overview-mode .page-footer span:last-child { position: absolute; right: 0; bottom: 0; padding: calc(2px / var(--overview-scale)) calc(7px / var(--overview-scale));
+    font-size: calc(12px / var(--overview-scale)); line-height: 1.3; color: #fff; background: #4f6a60; border-top-left-radius: calc(5px / var(--overview-scale)); }
   @media (max-width: 650px) { main, main.panel-right { grid-template-columns: max-content; } main.panel-right .side-stack, main.panel-right .workspace { grid-column: 1; grid-row: auto; } .side-stack { position: relative; top: auto; margin: 0 auto 18px; } aside { max-height: none; } }
 
   html { scrollbar-gutter: stable; }

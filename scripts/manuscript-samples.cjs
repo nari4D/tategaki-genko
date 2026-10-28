@@ -1,4 +1,3 @@
-const literary = require('../data/literature/kyonen-no-ki.json');
 const additionalLiterary = require('../data/literature/kumo-no-ito.json');
 const chumon = require('../data/literature/chumon-no-oi-ryoriten.json');
 
@@ -33,42 +32,16 @@ function splitReadings(marked) {
   });
 }
 
-const body = unmark(literary.markedBody);
-if ([...body.text.replaceAll('\n', '')].length !== literary.bodyCharacters) throw Error('Literary sample character count changed');
 const previousSamples = [
-  { sampleId: literary.id, title: '去年の木 — 新美南吉', font: 'mincho',
-    ...unmark('　　' + literary.title + '\n' + '　'.repeat(14) + literary.author + '\n' + literary.markedBody) },
   { sampleId: additionalLiterary.id, title: '蜘蛛の糸 — 芥川龍之介', font: 'mincho',
     ...unmark('　　' + additionalLiterary.title + '\n' + '　'.repeat(14) + additionalLiterary.author + '\n' + splitReadings(additionalLiterary.markedBody)) },
   { sampleId: chumon.id, title: '注文の多い料理店 — 宮沢賢治', font: 'mincho',
-    ...unmark('　　' + chumon.title + '\n' + '　'.repeat(14) + chumon.author + '\n' + splitReadings(chumon.markedBody)) },
-  { sampleId: 'check-punctuation', title: '確認用：句読点・かっこ', font: 'mincho', ...unmark([
-    '「若いころは、京都にも住んでいたそうだよ。」',
-    '「あの橋は、ずっとここにあったんだね。」',
-    '「手帳には『昔の橋』と書いてあるよ。」',
-    '　言葉を探して……私は手帳を閉じた。',
-    '　川の向こうへ――新しい橋が伸びていた。',
-    '　説明（写真は昭和初期のもの）を読み直した。'
-  ].join('\n')) },
-  { sampleId: 'check-ruby', title: '確認用：ふりがな', font: 'mincho', ...unmark([
-    '　[[湖|みずうみ]]を渡る舟を見ながら、祖父の[[志|こころざし]]を聞いた。',
-    '　[[交通安全|こう｜つう｜あん｜ぜん]]への願いを、町の本にまとめる。',
-    '　[[温故知新|おん｜こ｜ち｜しん]]という言葉を手帳に書いた。',
-    '　[[今日|きょう]]は庭の[[向日葵|ひまわり]]を描いた。',
-    '　私たちは古い橋の写真を探すため町から[[京都|きょう｜と]]へ向かった。'
-  ].join('\n')) }
+    ...unmark('　　' + chumon.title + '\n' + '　'.repeat(14) + chumon.author + '\n' + splitReadings(chumon.markedBody)) }
 ];
-const retiredSamples = previousSamples.filter(sample => sample.sampleId.startsWith('check-'));
 const literatureOrder = [chumon.id, additionalLiterary.id];
 const samples = [
   { sampleId: 'guide', title: 'はじめに', font: 'mincho', ...unmark(require('../data/guide.cjs')) },
   ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id))
-];
-// Withdrawn from the catalog for 1.0.0 (「去年の木」 and the layout check). The
-// app removes their protected copies; tests still use them as fixtures.
-const withdrawnSamples = [
-  previousSamples.find(sample => sample.sampleId === literary.id),
-  { sampleId: 'check-layout', title: '確認用：原稿用紙とふりがな', font: 'mincho', ...unmark(require('../data/manuscript-check.cjs')) }
 ];
 
 const notice = [
@@ -96,4 +69,4 @@ const notice = [
   '本作品の本文・青空文庫由来のデータにも、アプリ独自の外部再配布禁止条件は付しません。', ''
 ].join('\n');
 
-module.exports = { samples, retiredSamples, withdrawnSamples, literary, additionalLiterary, chumon, body, notice, unmark };
+module.exports = { samples, additionalLiterary, chumon, notice, unmark };

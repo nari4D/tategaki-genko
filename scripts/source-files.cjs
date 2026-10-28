@@ -10,8 +10,8 @@ const files = [
   'src/chrome/editor.html', 'src/chrome/editor.css', 'src/chrome/editor.js', 'src/chrome/startup.js',
   'src/chrome/background.js', 'src/chrome/print-geometry.cjs',
   'scripts/build-chrome-extension.cjs', 'scripts/manuscript-samples.cjs', 'scripts/vertical-alternates.json',
-  'data/manuscript-check.cjs', 'data/guide.cjs', 'data/chrome/legacy-samples.json',
-  'data/literature/kyonen-no-ki.json', 'data/literature/kumo-no-ito.json', 'data/literature/chumon-no-oi-ryoriten.json',
+  'data/guide.cjs', 'data/chrome/legacy-samples.json',
+  'data/literature/kumo-no-ito.json', 'data/literature/chumon-no-oi-ryoriten.json',
   'assets/fonts/klee-one/KleeOne-Regular.woff2', 'assets/fonts/klee-one/OFL.txt',
   'assets/fonts/yomogi/Yomogi-Regular.woff2', 'assets/fonts/yomogi/OFL.txt'
 ];

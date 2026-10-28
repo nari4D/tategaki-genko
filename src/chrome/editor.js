@@ -5,6 +5,8 @@
   // Each review edition has its own sample storage. Never migrate real manuscripts here.
   const CELL = 28, GAP = 12, CENTER_GAP = 16, ROWS = 20, COLS = 20, LIBRARY_KEY = 'tategaki-genko-chrome-library-v2';
   const ATTACHED_MARK_CENTER = CELL - 3;
+  // The overview never shrinks a sheet below a quarter of its size (221px wide).
+  const OVERVIEW_MIN_SCALE = .25;
   // Widest Windows IME candidate list allowed for (the prediction list is about 240px).
   const IME_LIST_WIDTH = 320;
   const FONT_OPTIONS = {
@@ -448,7 +450,7 @@
   function updateOverviewLayout() {
     if (!overviewMode) return;
     const n = Math.max(1, pages.children.length), gap = 12;
-    const width = Math.max(1, (document.documentElement.clientWidth || window.innerWidth) - 48), height = Math.max(1, window.innerHeight - 89);
+    const width = Math.max(1, (document.documentElement.clientWidth || window.innerWidth) - 48), height = Math.max(1, window.innerHeight - 124);
     let bestColumns = 1, bestScale = 0;
     for (let columns = 1; columns <= n; columns++) {
       const rows = Math.ceil(n / columns);
@@ -456,12 +458,19 @@
         (height - (rows - 1) * gap) / (rows * 640));
       if (scale > bestScale) { bestScale = scale; bestColumns = columns; }
     }
+    // Smaller than this, the pages of a long manuscript cannot be told apart: the
+    // overview keeps this size, fits as many across as the window allows, and scrolls.
+    if (bestScale < OVERVIEW_MIN_SCALE) {
+      bestScale = OVERVIEW_MIN_SCALE;
+      bestColumns = Math.max(1, Math.min(n, Math.floor((width + gap) / (884 * bestScale + gap))));
+    }
     document.documentElement.style.setProperty('--overview-cols', String(bestColumns));
     document.documentElement.style.setProperty('--overview-scale', String(Math.max(0.01, bestScale * .96)));
   }
   function setOverview(show, targetPage = null) {
     if (show === overviewMode) return;
     if (show) returnScrollY = window.scrollY;
+    const current = show ? visiblePages().center : null;
     overviewMode = show;
     if (show) input.blur();
     document.body.classList.toggle('overview-mode', show);
@@ -470,7 +479,11 @@
       button.title = show ? '通常表示へ戻る（Esc）' : '全ページを一覧表示';
       button.setAttribute('aria-label', button.title);
     }
-    if (show) { buildAllPages(); updateOverviewLayout(); }
+    if (show) {
+      buildAllPages(); updateOverviewLayout();
+      // A long overview scrolls; it opens at the page being written.
+      requestAnimationFrame(() => pages.children[current]?.scrollIntoView({ block: 'center' }));
+    }
     else {
       render();
       requestAnimationFrame(() => {
