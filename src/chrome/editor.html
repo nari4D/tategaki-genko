@@ -57,7 +57,7 @@
 
     <p class="app-meta"><span id="build-version">縦書き原稿用紙 {{VERSION}}</span>　<a href="notices.txt" target="_blank" rel="noopener noreferrer">作品と書体の出典</a></p>
   </aside>
-  <div class="page-tools" aria-label="ページ操作"><div class="page-tools-row"><button id="first-page" type="button" title="最初のページへ">先頭</button><span id="page-indicator">1 / 1</span><button id="last-page" type="button" title="最後のページへ">末尾</button><button id="overview-toggle" type="button" title="全ページを一覧表示" aria-label="全ページを一覧表示">一覧</button><button id="find-open" type="button" title="原稿を検索（Ctrl+F）">検索</button></div><div class="char-count">文字数 <span id="count">0</span>字</div></div>
+  <div class="page-tools" aria-label="ページ操作"><div class="page-tools-row"><button id="first-page" type="button" title="最初のページへ">先頭</button><span id="page-indicator">1 / 1</span><button id="last-page" type="button" title="最後のページへ">末尾</button><button id="overview-toggle" type="button" title="全ページを一覧表示" aria-label="全ページを一覧表示">一覧</button><button id="find-open" type="button" title="原稿を検索（Ctrl+F）">検索</button></div><div id="find-bar" class="find-bar" role="search" hidden><input id="find-query" type="search" aria-label="原稿内を検索" placeholder="原稿内を検索"><span id="find-count" aria-live="polite">0 / 0</span><button id="find-prev" type="button" title="前の一致箇所">↑</button><button id="find-next" type="button" title="次の一致箇所">↓</button><button id="find-close" type="button" title="検索を閉じる" aria-label="検索を閉じる">×</button></div><div class="char-count">文字数 <span id="count">0</span>字</div></div>
   </div>
   <section class="workspace">
     <div id="paper-scroll" class="paper-scroll"><textarea id="input" aria-label="原稿本文" autocomplete="off" spellcheck="false"></textarea><div id="pages"></div></div>
@@ -79,7 +79,7 @@
   <div class="panel-buttons"><button id="drive-load" class="primary-action" type="button" disabled>選んだ原稿を開く</button><button id="drive-cancel" type="button">閉じる</button></div>
 </dialog>
 <button id="show-panel" type="button" title="パネルを表示" aria-label="操作欄を戻す">操作欄を戻す</button>
-<div id="find-bar" class="find-bar" role="search" hidden><input id="find-query" type="search" aria-label="原稿内を検索" placeholder="原稿内を検索"><span id="find-count" aria-live="polite">0 / 0</span><button id="find-prev" type="button" title="前の一致箇所">↑</button><button id="find-next" type="button" title="次の一致箇所">↓</button><button id="find-close" type="button" title="検索を閉じる" aria-label="検索を閉じる">×</button></div>
+
 
 <dialog id="ruby-dialog" aria-labelledby="ruby-dialog-title"><form id="ruby-form"><h2 id="ruby-dialog-title">ふりがなを付ける・直す</h2><label>選択した本文<output id="ruby-base"></output></label><label for="ruby-reading">ふりがな</label><input id="ruby-reading" type="text" required autocomplete="off" placeholder="例：とうきょう"><p class="small-note">京都なら「きょう｜と」のように、文字ごとの読みを縦線で区切れます。列をまたいでも指定した読みを保ちます。「今日」のようにまとめて読む場合は「きょう」と入力します。区切り未指定で列をまたぐ場合は※を表示します。</p><p id="ruby-error" role="alert"></p><div class="panel-buttons"><button id="ruby-apply" type="submit">付ける</button><button id="ruby-remove" type="button">ふりがなを外す</button><button id="ruby-cancel" type="button">キャンセル</button></div></form></dialog>
 <script src="editor.js"></script>

@@ -1503,31 +1503,15 @@
     showFindPage(glyph.page);
   }
   let findPageIndex = 0;
-  function positionFindBar() {
-    if (findBar.hidden) return;
-    const page = pages.children[Math.min(findPageIndex, pages.children.length - 1)];
-    if (!page) return;
-    const box = page.getBoundingClientRect(), scale = box.width / 884;
-    const controlScale = Math.min(1, scale);
-    const rightSide = document.body.classList.contains('panel-on-right');
-    findBar.style.left = (rightSide ? box.right - 40 * scale - 250 * controlScale : box.left + 40 * scale) + 'px';
-    findBar.style.right = 'auto';
-    findBar.style.top = box.top + 3 * scale + 'px';
-    findBar.style.transform = 'scale(' + controlScale + ')';
-  }
   function showFindPage(index) {
     findPageIndex = Math.max(0, Math.min(index, pages.children.length - 1));
     pages.children[findPageIndex]?.scrollIntoView({ block: 'start' });
-    positionFindBar();
-  }
-  window.addEventListener('resize', positionFindBar);
-  window.addEventListener('scroll', positionFindBar, { passive: true });
-  for (const id of ['flip-panel', 'hide-panel', 'show-panel']) {
-    document.getElementById(id).addEventListener('click', () => requestAnimationFrame(positionFindBar));
   }
   function openFind() {
     if (findBar.hidden) findReturnFocus = document.activeElement;
     if (overviewMode) setOverview(false);
+    // The search box lives in the side panel, so bring the panel back first.
+    if (library.panelHidden) document.getElementById('show-panel').click();
     const visiblePage = [...pages.children].findIndex(page => page.getBoundingClientRect().bottom > 0);
     findBar.hidden = false;
     render();
