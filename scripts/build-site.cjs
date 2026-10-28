@@ -2,20 +2,38 @@
 // site/public/ with the shared header, navigation and footer, plus the source
 // pages (site/public/source/: one coloured page per file and a ZIP of the set).
 // No scripts, external fonts or trackers are added. Not published; preview locally.
-const fs = require('node:fs'), path = require('node:path'), zlib = require('node:zlib'), crypto = require('node:crypto');
+const fs = require('node:fs'), path = require('node:path'), zlib = require('node:zlib'), crypto = require('node:crypto'), { execFileSync } = require('node:child_process');
 const { entries, version } = require('./source-files.cjs');
 const { highlight, languageOf } = require('./highlight.cjs');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
-// The menu lists pages, never sections of a page. The terms page is in the
-// footer only.
-const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['support', 'お問い合わせ']];
-const footer = [...nav, ['legal', 'ご利用について・プライバシー']];
+// The menu lists pages, never sections of a page. Contact and the terms page
+// are in the footer only.
+const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き']];
+const footer = [...nav, ['support', 'お問い合わせ'], ['legal', 'ご利用について・プライバシー']];
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'images'), { recursive: true });
 fs.mkdirSync(path.join(out, 'source'));
 fs.copyFileSync(path.join(site, 'style.css'), path.join(out, 'style.css'));
 for (const image of fs.readdirSync(path.join(site, 'images'))) fs.copyFileSync(path.join(site, 'images', image), path.join(out, 'images', image));
+
+// ためし書き: the extension's editor as built from the published source, with
+// site/demo/demo.js loaded before it (memory instead of browser storage, opens
+// on a blank manuscript). The page may not connect anywhere.
+execFileSync(process.execPath, [path.join(root, 'scripts', 'build-chrome-extension.cjs')], { stdio: 'ignore' });
+const built = path.join(root, 'chrome-extension'), demo = path.join(out, 'try');
+fs.mkdirSync(demo);
+for (const file of ['editor.css', 'editor.js', 'startup.js']) fs.copyFileSync(path.join(built, file), path.join(demo, file));
+fs.cpSync(path.join(built, 'fonts'), path.join(demo, 'fonts'), { recursive: true });
+fs.copyFileSync(path.join(site, 'demo', 'demo.js'), path.join(demo, 'demo.js'));
+const editorPage = fs.readFileSync(path.join(built, 'editor.html'), 'utf8');
+if (editorPage.split('<script src="startup.js"></script>').length !== 2) throw Error('editor.html: startup.js script tag not found once');
+fs.writeFileSync(path.join(demo, 'editor.html'), editorPage
+  .replace('<script src="startup.js"></script>', '<script src="startup.js"></script>\n<script src="demo.js"></script>')
+  .replace('<title>縦書き原稿用紙</title>', '<title>ためし書き — 縦書き原稿用紙</title>\n<meta name="robots" content="noindex">'));
+fs.writeFileSync(path.join(out, '_headers'), `/try/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+`);
 
 // `up` is '' for top-level pages and '../' for pages under source/.
 function render({ name, title, description, body, up = '' }) {

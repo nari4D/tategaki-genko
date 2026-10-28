@@ -64,7 +64,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 // The site's own source, for the GitHub repository only (not in the ZIP).
 const siteFiles = () => [
-  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'site/style.css',
+  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
   ...['pages', 'images'].flatMap(dir => fs.readdirSync(path.join(root, 'site', dir)).map(name => `site/${dir}/${name}`))
 ];
 // Cloudflare Pages builds the site with this Node.js version.
