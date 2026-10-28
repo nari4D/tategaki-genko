@@ -104,8 +104,9 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 /* Questions: the question in vermilion, the answer right after it in the same column. */
 .faq > li { padding-inline-start: 1em; text-indent: -1em; }
 .faq .key { margin-inline-end: 1em; }
-/* A sheet that only carries a section title, beside that section's pictures. */
-.spread.title-slip { padding-block: 12px; }
+/* A section made only of pictures: its title stands on the page itself, set
+   vertically like the captions, with no sheet of manuscript paper. */
+.band-title { writing-mode: vertical-rl; text-orientation: upright; margin: 0; height: 440px; line-height: var(--lh); }
 /* A step: its kanji number hangs, the text below it. */
 .step { text-indent: 0; padding-inline-start: 2em; text-indent: -2em; }
 .note { padding: 12px 0; background: var(--shu-soft); border-top: 3px solid var(--shu); text-indent: 0; }
@@ -234,7 +235,8 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .spread { width: 100%; min-width: 0; padding: 24px calc(var(--lh) / 2); margin-bottom: 28px; }
   /* A short section is a slip as wide as its text, not a mostly empty sheet. */
   .spread.fit { width: fit-content; margin-inline: auto; }
-  .spread.title-slip { height: auto; }
+  .band-title { writing-mode: horizontal-tb; height: auto; margin: 0 0 16px; padding: 0 0 0 22px; }
+  .band-title::before { top: 50%; right: auto; left: 0; transform: translateY(-50%); }
   [id] { scroll-margin-top: 96px; }  /* clear the sticky menu when a link jumps here */
   /* The pages of a section are tiers (dan) of one sheet: one outer border, a thin rule
      between tiers, read top to bottom, each tier right to left. */
