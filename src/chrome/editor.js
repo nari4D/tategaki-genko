@@ -2073,6 +2073,8 @@
   if (sampleMigrationPending) {
     persist();
   }
+  // Ready to write at once: the caret waits in the manuscript, in the first cell when it is blank.
+  if (!isProtectedProject(activeProject())) { input.focus({ preventScroll: true }); render(); }
   window.genkoBoot.ready();
   document.fonts?.addEventListener?.('loadingdone', () => { verticalAlternateFamilies.clear(); invalidatePages(); render(); });
   document.fonts?.ready.then(() => { centerAllAttachedCommas(); positionAllSharedCellText(); });
