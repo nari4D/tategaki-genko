@@ -24,17 +24,13 @@
       <div class="panel-buttons"><button id="new-project" type="button">＋ 新しい原稿</button><button id="delete-project" class="delete-action" type="button" title="確認画面を開きます。ここでは削除しません。">削除の確認…</button></div>
     </div>
     <div class="edit-controls">
-      <h2 class="panel-heading">編集</h2>
       <select id="manuscript-font" aria-label="書体"><option value="mincho">游明朝</option><option value="gothic">游ゴシック</option><option value="biz-mincho">BIZ UD明朝</option><option value="kyokasho">UDデジタル教科書体</option><option value="shippori-b1">しっぽり明朝B1</option><option value="klee-one">クレー One</option><option value="yomogi">よもぎ</option></select>
       <button id="ruby-open" class="panel-action" type="button">ふりがなを付ける・直す</button>
       <p id="ruby-status" class="small-note" role="status"></p>
     </div>
     <div class="file-controls">
-      <h2 class="panel-heading">ファイル</h2>
-      <p class="file-label" id="save-buttons-label">この原稿を保存</p>
-      <div class="save-buttons" role="group" aria-labelledby="save-buttons-label"><button id="save-json" type="button" title="本文・ふりがな・書体・編集履歴を保存（Ctrl+S）">JSON</button><button id="save-txt" type="button" title="本文のみをテキストで保存">TXT</button><button id="save-pdf" type="button" title="印刷画面からPDFに保存">PDF</button></div>
-      
-      <button id="open-file" class="panel-action" type="button">ファイルを開く<span class="file-types">.json ／ .txt</span></button>
+      <div class="save-buttons" role="group" aria-labelledby="save-buttons-label"><span id="save-buttons-label" class="save-label">保存</span><button id="save-json" type="button" title="本文・ふりがな・書体・編集履歴を保存（Ctrl+S）">JSON</button><button id="save-txt" type="button" title="本文のみをテキストで保存">TXT</button><button id="save-pdf" type="button" title="印刷画面からPDFに保存">PDF</button></div>
+      <button id="open-file" class="panel-action" type="button" title="JSONとTXTを開けます">ファイルを開く</button>
       <input id="import-file" type="file" accept=".json,.txt,application/json,text/plain" hidden>
       <input id="import-backup" type="file" accept=".json,application/json" hidden>
       <input id="import" type="file" accept=".txt,text/plain" hidden>

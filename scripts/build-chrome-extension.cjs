@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const extensionVersion = '1.0.7';
+const extensionVersion = '1.0.8';
 const src = path.join(root, 'src', 'chrome');
 const out = path.join(root, 'chrome-extension');
 fs.mkdirSync(path.join(out, 'icons'), { recursive: true });
