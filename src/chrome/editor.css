@@ -86,7 +86,6 @@
   .find-cell { position: absolute; width: var(--cell); height: var(--cell); background: #efda8c80; pointer-events: none; }
   .find-cell.find-active { background: #e9b04eae; outline: 2px solid #a46b17; outline-offset: -2px; }
   .find-bar { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; }
-  .find-bar[hidden] { display: none; }
   .find-bar input { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid #cbd5d0; border-radius: 4px; font: inherit; }
   .find-bar button { padding: 4px 6px; font-size: 12px; }
   #find-count { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; color: #65766b; }

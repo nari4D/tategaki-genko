@@ -70,8 +70,7 @@
     ['{', '︷'], ['}', '︸'], ['｢', '﹁'], ['｣', '﹂']
   ]);
   let stops = [];
-  let findMatches = [], activeFindIndex = -1, findReturnFocus = null;
-  const findBar = document.getElementById('find-bar');
+  let findMatches = [], activeFindIndex = -1;
   const findQuery = document.getElementById('find-query');
   const findCount = document.getElementById('find-count');
   let library;
@@ -799,7 +798,7 @@
   }
   function refreshFindMatches() {
     const previousStart = findMatches[activeFindIndex]?.start;
-    findMatches = findBar.hidden ? [] : searchRanges(input.value, findQuery.value);
+    findMatches = findQuery.value ? searchRanges(input.value, findQuery.value) : [];
     if (!findMatches.length) activeFindIndex = -1;
     else if (previousStart === undefined) activeFindIndex = 0;
     else {
@@ -1502,47 +1501,56 @@
     buildPage(glyph.page);
     showFindPage(glyph.page);
   }
-  let findPageIndex = 0;
+  // The search box is always in the side panel. Searching never moves the paper
+  // unless the match to show is off screen, and then only as far as needed.
   function showFindPage(index) {
-    findPageIndex = Math.max(0, Math.min(index, pages.children.length - 1));
-    pages.children[findPageIndex]?.scrollIntoView({ block: 'start' });
+    const page = pages.children[Math.max(0, Math.min(index, pages.children.length - 1))];
+    if (!page) return;
+    const box = page.getBoundingClientRect();
+    if (box.top >= 0 && box.bottom <= window.innerHeight) return;
+    page.scrollIntoView({ block: 'nearest' });
   }
+  const matchPage = match => plan?.result.glyphs.find(item => item.end > match.start)?.page ?? 0;
   function openFind() {
-    if (findBar.hidden) findReturnFocus = document.activeElement;
-    if (overviewMode) setOverview(false);
-    // The search box lives in the side panel, so bring the panel back first.
     if (library.panelHidden) document.getElementById('show-panel').click();
-    const visiblePage = [...pages.children].findIndex(page => page.getBoundingClientRect().bottom > 0);
-    findBar.hidden = false;
-    render();
-    showFindPage(Math.max(0, visiblePage));
     findQuery.focus({ preventScroll: true });
     findQuery.select();
   }
-  function closeFind() {
-    findBar.hidden = true;
+  function clearFind() {
     findQuery.value = '';
-    if (findReturnFocus?.isConnected) findReturnFocus.focus({ preventScroll: true });
-    findReturnFocus = null;
     render();
   }
   function moveFind(direction) {
     if (!findMatches.length) return;
+    if (overviewMode) setOverview(false);
     activeFindIndex = (activeFindIndex + direction + findMatches.length) % findMatches.length;
     render();
     scrollToFindMatch();
   }
-  document.getElementById('find-open').addEventListener('click', openFind);
-  document.getElementById('find-close').addEventListener('click', closeFind);
+  document.getElementById('find-close').addEventListener('click', () => { clearFind(); findQuery.focus({ preventScroll: true }); });
   document.getElementById('find-prev').addEventListener('click', () => moveFind(-1));
   document.getElementById('find-next').addEventListener('click', () => moveFind(1));
+  // Typing a query marks every match and makes the first one on or after the page
+  // in view the current one, so the paper stays where it is when it can.
   findQuery.addEventListener('input', () => {
     activeFindIndex = -1;
     render();
+    if (!findMatches.length || !plan) return;
+    const boxes = [...pages.children].map(page => page.getBoundingClientRect());
+    const whole = boxes.findIndex(box => box.top >= 0 && box.bottom <= window.innerHeight);
+    const inView = whole >= 0 ? whole : Math.max(0, boxes.findIndex(box => box.bottom > 0));
+    const next = findMatches.findIndex(match => matchPage(match) >= inView);
+    if (next > 0) { activeFindIndex = next; render(); }
     scrollToFindMatch();
   });
   findQuery.addEventListener('keydown', event => {
-    if (event.key !== 'Enter' || event.isComposing) return;
+    if (event.isComposing) return;
+    if (event.key === 'Escape') {
+      event.preventDefault(); event.stopPropagation();
+      clearFind(); input.focus({ preventScroll: true });
+      return;
+    }
+    if (event.key !== 'Enter') return;
     event.preventDefault();
     moveFind(event.shiftKey ? -1 : 1);
   });
@@ -1689,9 +1697,6 @@
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       openFind();
-    } else if (event.key === 'Escape' && !findBar.hidden) {
-      event.preventDefault();
-      closeFind();
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
