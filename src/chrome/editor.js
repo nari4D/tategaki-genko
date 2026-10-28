@@ -254,6 +254,9 @@
   // up to 200 still loads and saves; new manuscripts (samples included) stop at
   // `newProjects`. Ruby-heavy prose (e.g. Izumi Kyoka) has about 25 rubies a page,
   // so 100 pages need room for well over 2,000.
+  // Automatic history: one version per 30 minutes of writing, 48 per manuscript
+  // (a whole day of writing). Older files with up to 50 versions still open.
+  const HISTORY_LIMIT = 48, AUTO_VERSION_INTERVAL = 30 * 60 * 1000;
   const SAFETY = Object.freeze({ fileBytes: 10000000, textUnits: 40000, pages: 100,
     projects: 200, newProjects: 30, history: 50, rubies: 5000, archiveUnits: 1000000 });
   let originalStored = null, lastStored = null, storageProtected = false;
@@ -1176,7 +1179,7 @@
   function addVersion(project, kind) {
     if (!project.text && !project.title) return;
     project.history.push({ id: newId(), at: Date.now(), kind, title: project.title, text: project.text, font: normalizeFont(project.font), rubies: normalizeRubies(project.text, project.rubies || []) });
-    if (project.history.length > 50) project.history.splice(0, project.history.length - 50);
+    if (project.history.length > HISTORY_LIMIT) project.history.splice(0, project.history.length - HISTORY_LIMIT);
     project.lastVersionAt = Date.now();
   }
   function refreshProjectOptions() {
@@ -1246,7 +1249,7 @@
     const project = activeProject();
     if (project) {
       const changedText = project.text !== input.value;
-      if (changedText && project.text && Date.now() - project.lastVersionAt >= 60 * 60 * 1000) {
+      if (changedText && project.text && Date.now() - project.lastVersionAt >= AUTO_VERSION_INTERVAL) {
         addVersion(project, '自動');
         refreshVersions();
       }
@@ -1732,7 +1735,7 @@
   }
   function copyHistory(source) {
     return source.history.filter(v => v && typeof v.title === 'string' && typeof v.text === 'string')
-      .slice(-50).map(v => ({ id: newId(), at: Number(v.at) || Date.now(), kind: String(v.kind || '以前の版'), title: v.title, text: v.text, font: normalizeFont(v.font), rubies: normalizeRubies(v.text, v.rubies || []) }));
+      .slice(-HISTORY_LIMIT).map(v => ({ id: newId(), at: Number(v.at) || Date.now(), kind: String(v.kind || '以前の版'), title: v.title, text: v.text, font: normalizeFont(v.font), rubies: normalizeRubies(v.text, v.rubies || []) }));
   }
   function restoreProject(source, allowOversize = false) {
     validateArchiveProjects([source], !allowOversize);
@@ -1757,7 +1760,7 @@
     project.font = normalizeFont(source.font);
     project.rubies = normalizeRubies(source.text, source.rubies || []);
     const mergedHistory = new Map([...copyHistory(source), ...oldHistory].map(v => [JSON.stringify([v.at, v.title, v.text, normalizeFont(v.font), v.rubies || [], v.kind]), v]));
-    project.history = [...mergedHistory.values()].sort((a, b) => a.at - b.at).slice(-50);
+    project.history = [...mergedHistory.values()].sort((a, b) => a.at - b.at).slice(-HISTORY_LIMIT);
     project.updatedAt = Date.now();
     project.lastVersionAt = Date.now();
     if (source.protected === true) project.protected = true; else delete project.protected;
@@ -1894,7 +1897,7 @@
     return {
       id: project.id, title: project.title, text: project.text, font: normalizeFont(project.font),
       rubies: normalizeRubies(project.text, project.rubies || []),
-      history: project.history.slice(-50).map(item => ({ id: item.id, at: item.at, kind: item.kind,
+      history: project.history.slice(-HISTORY_LIMIT).map(item => ({ id: item.id, at: item.at, kind: item.kind,
         title: item.title, text: item.text, font: normalizeFont(item.font), rubies: normalizeRubies(item.text, item.rubies || []) })),
       updatedAt: project.updatedAt, lastVersionAt: project.lastVersionAt, ...(project.protected === true ? { protected: true } : {})
     };
