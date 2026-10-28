@@ -151,10 +151,10 @@ th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(-
 .plate img, .plate video { width: min(820px, 100%); height: auto; border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2418; }
 .plate figcaption { writing-mode: vertical-rl; text-orientation: upright; font-size: 14px; color: var(--muted); max-height: 520px; }
 /* Step pictures: smaller, the toolbar pictures one above the other, the caption is the step itself. */
-/* ためし書き: the editor itself, as large as the window allows. On a phone only a
-   note is shown, since the editor is made for a computer. */
-.plate.demo { width: 100%; max-width: 1240px; align-items: stretch; }
-.plate.demo iframe { flex: 1; min-width: 0; height: max(560px, calc(100vh - 110px)); border: 1px solid var(--rule); background: #f5f6f3; box-shadow: 0 10px 30px #4a3a2418; }
+/* ためし書き: the editor itself, filling the window (its own note says nothing is
+   saved). On a phone only a note is shown, since the editor is made for a computer. */
+.demo { width: 100%; }
+.demo iframe { display: block; width: 100%; height: max(600px, calc(100vh - 42px)); border: 1px solid var(--rule); background: #f5f6f3; box-shadow: 0 10px 30px #4a3a2418; }
 .demo-phone { display: none; }
 .plate.step .shots { display: flex; flex-direction: column; gap: 14px; }
 .plate.step { align-items: center; }
@@ -217,6 +217,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .plate.step img { width: 260px; }
   .plate.step > img.native { width: 260px; }
   .row.steps { column-gap: 20px; }
+  main:has(.demo) { padding: 30px calc(var(--rail) + 12px) 12px 12px; }
   /* Set the whole step vertically, caption on the right, so the figure is only as
      wide as its picture and caption (a vertical caption inside a horizontal box
      was sized as if it took two columns). */
@@ -256,7 +257,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   /* A phone cannot add a Chrome extension, so the hero keeps to its words. */
   .hero .buttons { display: none; }
   .hero .more { display: none; }
-  .plate.demo { display: none; }
+  .demo { display: none; }
   .spread.demo-phone { display: block; }
   .plate { flex-direction: column; align-items: center; }
   .plate figcaption { writing-mode: horizontal-tb; }
