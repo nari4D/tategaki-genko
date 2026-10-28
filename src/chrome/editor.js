@@ -85,6 +85,7 @@
   const LEGACY_SAMPLES = /* build: LEGACY_SAMPLES */[];
   // Samples withdrawn from the catalog for 1.0.0: 「去年の木」 and the layout check.
   const WITHDRAWN_SAMPLES = ['aozora-4719', 'check-layout'];
+  const WITHDRAWN_TITLES = ['去年の木 — 新美南吉', '確認用：原稿用紙とふりがな', '確認用：句読点・かっこ', '確認用：ふりがな'];
   let sampleMigrationPending = false;
   function sampleProject(example) {
     const project = newProject(example.title, example.text);
@@ -189,7 +190,7 @@
   }
   function createSampleLibrary() {
     const projects = SAMPLE_CATALOG.map(sampleProject);
-    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', projects };
+    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', panelSideVersion: 1, projects };
   }
   function unchangedLegacySample(project) {
     if (project.history.length || project.driveLink || project.protected === true) return false;
@@ -248,10 +249,12 @@
     sampleMigrationPending = true;
     return stored;
   }
-  // A protected copy of a withdrawn sample is the untouched original, so it goes;
-  // a copy someone made editable is their own manuscript and stays.
+  // The withdrawn samples and the check manuscripts shipped only in pre-release
+  // builds, so every copy goes, edited or not. Those builds also kept the panel
+  // on the left; 1.0.0 moves it to the right once, saved with the next change.
   function withdrawSamples(stored) {
-    const kept = stored.projects.filter(project => !(project.sampleProtected && WITHDRAWN_SAMPLES.includes(project.sampleId)));
+    if (stored.panelSideVersion !== 1) { stored.panelSide = 'right'; stored.panelSideVersion = 1; }
+    const kept = stored.projects.filter(project => !WITHDRAWN_SAMPLES.includes(project.sampleId) && !WITHDRAWN_TITLES.includes(project.title));
     if (kept.length === stored.projects.length) return stored;
     stored.projects = kept.length ? kept : [newProject()];
     if (!stored.projects.some(project => project.id === stored.activeId)) stored.activeId = stored.projects[0].id;
@@ -2060,7 +2063,7 @@
   }
 
   library = loadLibrary();
-  panelSide.value = library.panelSide === 'right' ? 'right' : 'left';
+  panelSide.value = library.panelSide === 'left' ? 'left' : 'right';
   applyPanelSide();
   document.body.classList.toggle('panel-hidden', library.panelHidden === true);
   fitPaper();
