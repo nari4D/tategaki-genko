@@ -52,7 +52,7 @@ function render({ name, title, description, body, up = '' }) {
 <link rel="stylesheet" href="${up}style.css">
 </head>
 <body>
-<div class="draft-banner">下書き（未公開）。〔 〕の箇所は未確定です。</div>
+<div class="draft-banner">下書き（未公開）</div>
 <header class="rail">
 <a class="brand" href="${up}index.html"><span class="brand-mark" aria-hidden="true"></span>縦書き原稿用紙</a>
 <nav aria-label="サイト内">${nav.map(link).join('')}</nav>
@@ -60,7 +60,7 @@ function render({ name, title, description, body, up = '' }) {
 <main>
 ${body.trim()}
 </main>
-${name === 'try' && !up ? '' /* ためし書き ends with the demo */ : `<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">PC版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 〔作者名〕</span></div></footer>
+${name === 'try' && !up ? '' /* ためし書き ends with the demo */ : `<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">PC版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 お鋳成（OINARI）</span></div></footer>
 `}</body>
 </html>
 `;

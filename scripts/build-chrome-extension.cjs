@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const extensionVersion = '1.0.10';
+const extensionVersion = '1.0.11';
 const src = path.join(root, 'src', 'chrome');
 const out = path.join(root, 'chrome-extension');
 fs.mkdirSync(path.join(out, 'icons'), { recursive: true });
@@ -55,7 +55,8 @@ fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({
   name: '縦書き原稿用紙',
   version: extensionVersion,
   minimum_chrome_version: '116',
-  description: 'アイコンから縦書き原稿用紙を開きます。ルビ・編集履歴・JSON保存に対応。原稿は端末内に保存します。',
+  // Shown as the summary on the Chrome Web Store (132 characters at most).
+  description: '四百字詰めの原稿用紙に、縦書きでそのまま書けます。ふりがな・禁則・印刷に対応。無料で、原稿はパソコンの中だけに保存します。',
   action: { default_title: '縦書き原稿用紙を開く', default_icon: icons },
   icons,
   background: { service_worker: 'background.js' },
@@ -78,8 +79,11 @@ function chunk(type, data) {
 }
 for (const size of [16, 32, 48, 128]) {
   const bytes = Buffer.alloc((size * 4 + 1) * size);
+  // The store wants the 128px icon as 96px artwork with 16px of transparent padding.
+  const pad = size === 128 ? 16 : 0, art = size - pad * 2;
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const xx = x / size, yy = y / size;
+    if (x < pad || y < pad || x >= pad + art || y >= pad + art) continue;  // left transparent
+    const xx = (x - pad) / art, yy = (y - pad) / art;
     const paper = xx >= .16 && xx <= .84 && yy >= .1 && yy <= .9;
     const vertical = [.23, .41, .59, .77].some(line => Math.abs(xx - line) < .012);
     const horizontal = [.2, .35, .5, .65, .8].some(line => Math.abs(yy - line) < .01);
