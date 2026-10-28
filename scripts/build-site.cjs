@@ -6,10 +6,10 @@ const fs = require('node:fs'), path = require('node:path'), zlib = require('node
 const { entries, version } = require('./source-files.cjs');
 const { highlight, languageOf } = require('./highlight.cjs');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
-// The menu lists pages, never sections of a page. Contact and the terms page
-// are in the footer only.
+// The menu lists pages, never sections of a page. The terms page is in the
+// footer only. There is no contact page: the address is given in the store only.
 const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き']];
-const footer = [...nav, ['support', 'お問い合わせ'], ['legal', 'ご利用について']];
+const footer = [...nav, ['legal', 'ご利用について']];
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'images'), { recursive: true });
@@ -95,7 +95,7 @@ fs.writeFileSync(path.join(out, 'source', 'index.html'), render({
   body: `<article class="code-page">
 <h1>ソースコード（${version}）</h1>
 <p>Chromeウェブストアで公開する拡張機能は、この一式から作ります。Node.js 22以降で <code>node scripts/build-chrome-extension.cjs</code> を実行すると、<code>chrome-extension</code> フォルダーに拡張機能が作られます。</p>
-<p><a class="download" href="${zipName}" download>一式をダウンロード（ZIP、${zipSize}MB）</a>　<a href="https://github.com/nari4D/tategaki-genko">GitHub</a>　<a href="LICENSE.md.html">ライセンス</a></p>
+<p><a class="download" href="${zipName}" download>一式をダウンロード（ZIP、${zipSize}MB）</a>　<a href="LICENSE.md.html">ライセンス</a></p>
 <div class="table-wrap"><table class="files"><thead><tr><th>ファイル</th><th>行数</th><th>SHA-256</th></tr></thead><tbody>
 ${rows.join('\n')}
 </tbody></table></div>
