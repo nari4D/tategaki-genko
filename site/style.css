@@ -101,9 +101,10 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 .pledge { font-size: 20px; font-weight: 600; color: var(--shu); }
 /* The hero's button stands in the middle of its column. */
 .hero .buttons { justify-content: center; }
-/* Questions: the question in vermilion, the answer right after it in the same column. */
-.faq > li { padding-inline-start: 1em; text-indent: -1em; }
-.faq .key { margin-inline-end: 1em; }
+/* Questions: the question in vermilion on its own column, the answer from the
+   next column, one square down; no blank column between questions. */
+.faq > li { padding-inline-start: 1em; }
+.faq .key { display: block; margin-inline-start: -1em; }
 /* A section made only of pictures: its title stands on the page itself, set
    vertically like the captions, with no sheet of manuscript paper. */
 .band-title { writing-mode: vertical-rl; text-orientation: upright; margin: 0; height: 440px; line-height: var(--lh); }
