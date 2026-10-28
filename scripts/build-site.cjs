@@ -23,7 +23,7 @@ for (const image of fs.readdirSync(path.join(site, 'images'))) fs.copyFileSync(p
 execFileSync(process.execPath, [path.join(root, 'scripts', 'build-chrome-extension.cjs')], { stdio: 'ignore' });
 const built = path.join(root, 'chrome-extension'), demo = path.join(out, 'try');
 fs.mkdirSync(demo);
-for (const file of ['editor.css', 'editor.js', 'startup.js']) fs.copyFileSync(path.join(built, file), path.join(demo, file));
+for (const file of ['editor.css', 'editor.js', 'startup.js', 'notices.txt']) fs.copyFileSync(path.join(built, file), path.join(demo, file));
 fs.cpSync(path.join(built, 'fonts'), path.join(demo, 'fonts'), { recursive: true });
 fs.copyFileSync(path.join(site, 'demo', 'demo.js'), path.join(demo, 'demo.js'));
 const editorPage = fs.readFileSync(path.join(built, 'editor.html'), 'utf8');

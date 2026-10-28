@@ -1463,20 +1463,6 @@
   document.getElementById('ruby-form').addEventListener('submit', event => { event.preventDefault(); commitRuby(); });
   document.getElementById('ruby-remove').addEventListener('click', () => commitRuby(true));
   document.getElementById('ruby-cancel').addEventListener('click', () => rubyDialog.close());
-  function openStandardSample(sampleId) {
-    save();
-    let project = library.projects.find(item => item.sampleId === sampleId);
-    if (!project) {
-      if (!canAddProjects(1)) return;
-      project = sampleProject(SAMPLE_CATALOG.find(item => item.sampleId === sampleId));
-      library.projects.push(project);
-    }
-    library.activeId = project.id;
-    persist(); showProject(); window.scrollTo(0, 0);
-  }
-  document.getElementById('ruby-sample').addEventListener('click', () => openStandardSample('check-layout'));
-  document.getElementById('literature-sample').addEventListener('click', () => openStandardSample('aozora-92'));
-  document.getElementById('chumon-sample').addEventListener('click', () => openStandardSample('aozora-43754'));
   function applyPanelSide() {
     const onRight = panelSide.value === 'right';
     main.classList.toggle('panel-right', onRight);

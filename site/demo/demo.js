@@ -3,8 +3,8 @@
 // manuscript disappears when the page is closed or reloaded, and nothing is sent
 // anywhere (the page's Content-Security-Policy also forbids connections).
 // The switcher offers only the blank draft and the read-only guide 「はじめに」;
-// new/delete, protecting, saving, opening files, the edit history and the old
-// help panel are greyed out. Writing, ruby, fonts and the page tools stay.
+// new/delete, protecting, saving, opening files and the edit history are greyed
+// out. Writing, ruby, fonts and the page tools stay.
 // Loaded after startup.js and before editor.js.
 (function () {
   var data = new Map();
@@ -18,7 +18,7 @@
   };
   Object.defineProperty(window, 'localStorage', { value: memory, configurable: true });
 
-  var LOCKED = '#new-project, #delete-project, .file-controls, .history-controls, .help-controls, #toggle-protection, #copy-sample';
+  var LOCKED = '#new-project, #delete-project, .file-controls, .history-controls, #toggle-protection, #copy-sample';
   function lock() {
     var style = document.createElement('style');
     style.textContent = LOCKED + ' { opacity: .4; pointer-events: none; user-select: none; }' +

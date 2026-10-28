@@ -26,8 +26,8 @@
   .project-controls > label { font-size: 12px; font-weight: normal; }
   .file-controls { margin-top: 16px; padding-top: 13px; border-top: 1px solid #e2e7e1; }
   .edit-controls { margin-top: 16px; padding-top: 13px; border-top: 1px solid #e2e7e1; }
-  .help-controls { margin-top: 14px; padding-top: 10px; border-top: 1px solid #e2e7e1; }
-  .help-controls summary { font-size: 12px; cursor: pointer; color: #47685b; }
+  .app-meta { margin: 14px 0 0; padding-top: 10px; border-top: 1px solid #e2e7e1; font-size: 11px; line-height: 1.6; color: #6b746f; }
+  .app-meta a { color: #47685b; }
   .file-feedback { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: #365545; }
   .drive-controls { margin-top: 16px; padding-top: 13px; border-top: 1px solid #e2e7e1; }
   button:disabled { opacity: .48; cursor: default; }
