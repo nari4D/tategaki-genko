@@ -99,6 +99,8 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 /* One-line items run column after column, like a list of specifications. */
 .hang.tight > li, .pages > .spread:not(:last-child) .hang.tight > li:last-child { margin-block-end: 0; }
 .pledge { font-size: 20px; font-weight: 600; color: var(--shu); }
+/* Lines only for a phone (the hero there is shorter). */
+.narrow { display: none; }
 /* The hero's button stands in the middle of its column. */
 .hero .buttons { justify-content: center; }
 /* Questions: the question in vermilion on its own column, the answer from the
@@ -257,6 +259,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   /* A phone cannot add a Chrome extension, so the hero keeps to its words. */
   .hero .buttons { display: none; }
   .hero .more { display: none; }
+  .hero .narrow { display: block; }
   .demo { display: none; }
   .spread.demo-phone { display: block; }
   .plate { flex-direction: column; align-items: center; }

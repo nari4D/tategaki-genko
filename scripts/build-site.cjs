@@ -91,9 +91,9 @@ const rows = set.map(([file, data]) => {
 fs.writeFileSync(path.join(out, 'source', zipName), zip(set));
 const zipSize = (fs.statSync(path.join(out, 'source', zipName)).size / 1048576).toFixed(1);
 fs.writeFileSync(path.join(out, 'source', 'index.html'), render({
-  name: 'source', up: '../', title: 'プログラム', description: '縦書き原稿用紙のプログラム一式。',
+  name: 'source', up: '../', title: 'ソースコード', description: '縦書き原稿用紙のソースコード一式。',
   body: `<article class="code-page">
-<h1>プログラム（${version}）</h1>
+<h1>ソースコード（${version}）</h1>
 <p>Chromeウェブストアで公開する拡張機能は、この一式から作ります。Node.js 22以降で <code>node scripts/build-chrome-extension.cjs</code> を実行すると、<code>chrome-extension</code> フォルダーに拡張機能が作られます。</p>
 <p><a class="download" href="${zipName}" download>一式をダウンロード（ZIP、${zipSize}MB）</a>　<a href="https://github.com/nari4D/tategaki-genko">GitHub</a>　<a href="LICENSE.md.html">ライセンス</a></p>
 <div class="table-wrap"><table class="files"><thead><tr><th>ファイル</th><th>行数</th><th>SHA-256</th></tr></thead><tbody>
@@ -104,9 +104,9 @@ ${rows.join('\n')}
 for (const [file, data] of set.filter(([file]) => isText(file))) {
   const lines = highlight(data.toString('utf8').replace(/\r\n/g, '\n'), file);
   fs.writeFileSync(path.join(out, 'source', pageOf(file)), render({
-    name: 'source', up: '../', title: file, description: `縦書き原稿用紙のプログラム：${file}`,
+    name: 'source', up: '../', title: file, description: `縦書き原稿用紙のソースコード：${file}`,
     body: `<article class="code-page">
-<p class="crumb"><a href="index.html">プログラム</a> ／ ${file}</p>
+<p class="crumb"><a href="index.html">ソースコード</a> ／ ${file}</p>
 <h1>${file}</h1>
 <pre class="code${languageOf(file) ? '' : ' plain'}"><code>${lines.map(line => `<span class="l">${line}</span>`).join('')}</code></pre>
 </article>`
