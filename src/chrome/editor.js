@@ -94,10 +94,18 @@
     return isOriginalSample(project) || project?.protected === true;
   }
   // A protected original cannot be edited, so it follows the bundled readings.
-  // Drafts and edited copies keep their own readings.
+  // The read-only guide 「はじめに」 also follows the bundled text, so a new
+  // version's instructions reach existing users. Drafts and edited copies keep
+  // their own text and readings.
   function refreshOriginalSampleRubies(stored) {
     for (const project of stored.projects) {
       const source = project.sampleProtected && SAMPLE_CATALOG.find(sample => sample.sampleId === project.sampleId);
+      if (source?.sampleId === 'guide' && (project.text !== source.text || project.title !== source.title)) {
+        project.title = source.title; project.text = source.text;
+        project.rubies = source.rubies.map(ruby => ({ ...ruby }));
+        sampleMigrationPending = true;
+        continue;
+      }
       if (!source || project.text !== source.text || JSON.stringify(project.rubies) === JSON.stringify(source.rubies)) continue;
       project.rubies = source.rubies.map(ruby => ({ ...ruby }));
       sampleMigrationPending = true;
