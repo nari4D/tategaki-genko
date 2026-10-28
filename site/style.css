@@ -274,6 +274,13 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   pre.code .l { padding-left: 3.6em; }
   pre.code .l::before { width: 2.8em; }
   .colophon { height: 330px; padding: 20px 14px; }
+  /* Rules (ご利用について) on a phone: the label runs into its text and items follow
+     column after column, so a sheet is not left half empty. */
+  .rules > li { padding-inline-start: 0; text-indent: 0; margin-block-end: 0; }
+  .pages > .spread:not(:last-child) .rules > li:last-child { margin-block-end: 0; }
+  .rules .key { display: inline; inline-size: auto; }
+  .rules .key::after { content: "　"; }
+  .pages .byline.spaced { margin-block-end: 0; }
   /* No blank column before the copyright, so the colophon fits a 360px screen. */
   .colophon .copy { margin-block-start: 0; }
 }
