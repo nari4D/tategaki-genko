@@ -59,23 +59,28 @@ const previousSamples = [
   ].join('\n')) }
 ];
 const retiredSamples = previousSamples.filter(sample => sample.sampleId.startsWith('check-'));
-const literatureOrder = [chumon.id, additionalLiterary.id, literary.id];
+const literatureOrder = [chumon.id, additionalLiterary.id];
 const samples = [
   { sampleId: 'guide', title: 'はじめに', font: 'mincho', ...unmark(require('../data/guide.cjs')) },
-  ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id)),
+  ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id))
+];
+// Withdrawn from the catalog for 1.0.0 (「去年の木」 and the layout check). The
+// app removes their protected copies; tests still use them as fixtures.
+const withdrawnSamples = [
+  previousSamples.find(sample => sample.sampleId === literary.id),
   { sampleId: 'check-layout', title: '確認用：原稿用紙とふりがな', font: 'mincho', ...unmark(require('../data/manuscript-check.cjs')) }
 ];
 
 const notice = [
-  '標準見本の出典', '', literary.title + '／' + literary.author,
-  '図書カード：' + literary.cardUrl, '本文：' + literary.textUrl,
-  '底本：「' + literary.baseBook + '」' + literary.publisher,
-  literary.baseEdition, '底本の親本：「' + literary.parentBook + '」',
-  '入力：' + literary.inputBy, '校正：' + literary.proofreadBy.join('、'),
-  '2003年9月29日作成', literary.originNotice, '',
-  'このアプリでの変換：' + literary.conversion, '',
-  '新美南吉は1943年3月22日没。本作品は日本で著作権保護期間が満了した作品です。',
-  '青空文庫の収録ファイルの取り扱い規準：' + literary.reuseUrl,
+  '標準見本の出典', '',
+  chumon.title + '／' + chumon.author,
+  '図書カード：' + chumon.cardUrl, '本文：' + chumon.textUrl,
+  '底本：「' + chumon.baseBook + '」' + chumon.publisher, chumon.baseEdition,
+  '初出：' + chumon.firstPublished, '入力：' + chumon.inputBy, '校正：' + chumon.proofreadBy.join('、'),
+  '2005年1月26日作成', chumon.originNotice,
+  'このアプリでの変換：' + chumon.conversion,
+  '宮沢賢治は1933年9月21日没。本作品は日本で著作権保護期間が満了した作品です。',
+  '青空文庫の収録ファイルの取り扱い規準：' + chumon.reuseUrl,
   '本作品の本文・青空文庫由来のデータに、アプリ独自の外部再配布禁止条件は付しません。',
   '図書カードの書誌データ：青空文庫、CC BY 4.0（https://creativecommons.org/licenses/by/4.0/）。',
   '青空文庫は本アプリの制作・公認に関与していません。', '',
@@ -88,18 +93,7 @@ const notice = [
   'このアプリでの変換：' + additionalLiterary.conversion,
   '芥川龍之介は1927年7月24日没。本作品は日本で著作権保護期間が満了した作品です。',
   '青空文庫の収録ファイルの取り扱い規準：' + additionalLiterary.reuseUrl,
-  '本作品の本文・青空文庫由来のデータにも、アプリ独自の外部再配布禁止条件は付しません。', '',
-  chumon.title + '／' + chumon.author,
-  '図書カード：' + chumon.cardUrl, '本文：' + chumon.textUrl,
-  '底本：「' + chumon.baseBook + '」' + chumon.publisher, chumon.baseEdition,
-  '初出：' + chumon.firstPublished, '入力：' + chumon.inputBy, '校正：' + chumon.proofreadBy.join('、'),
-  '2005年1月26日作成', chumon.originNotice,
-  'このアプリでの変換：' + chumon.conversion,
-  '宮沢賢治は1933年9月21日没。本作品は日本で著作権保護期間が満了した作品です。',
-  '青空文庫の収録ファイルの取り扱い規準：' + chumon.reuseUrl,
-  '本作品の本文・青空文庫由来のデータにも、アプリ独自の外部再配布禁止条件は付しません。', '',
-  '「確認用：原稿用紙とふりがな」は本アプリの表示確認用に作成した文章です。',
-  '確認用原稿の文字位置やルビの区切りは検査のための指定であり、文学作品の原文ではありません。', ''
+  '本作品の本文・青空文庫由来のデータにも、アプリ独自の外部再配布禁止条件は付しません。', ''
 ].join('\n');
 
-module.exports = { samples, retiredSamples, literary, additionalLiterary, chumon, body, notice, unmark };
+module.exports = { samples, retiredSamples, withdrawnSamples, literary, additionalLiterary, chumon, body, notice, unmark };

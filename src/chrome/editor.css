@@ -151,6 +151,7 @@
   @media print { .safety-panel { display: none !important; } }
   /* One row: the word 保存 and the three formats, with no heading above. */
   .save-buttons { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); align-items: center; gap: 5px; }
+  .file-types { margin-left: 2px; color: #77837d; font-size: 11px; }
   .save-label { padding-right: 3px; font-size: 12px; color: #173633; }
   .save-buttons button { min-width: 0; padding: 7px 2px; font-size: 12px; }
   .corner-mark { overflow: hidden; }

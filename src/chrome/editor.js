@@ -81,6 +81,8 @@
   // Unedited samples of earlier editions, recognised so they can be retired.
   // Filled at build time from data/chrome/legacy-samples.json.
   const LEGACY_SAMPLES = /* build: LEGACY_SAMPLES */[];
+  // Samples withdrawn from the catalog for 1.0.0: 「去年の木」 and the layout check.
+  const WITHDRAWN_SAMPLES = ['aozora-4719', 'check-layout'];
   let sampleMigrationPending = false;
   function sampleProject(example) {
     const project = newProject(example.title, example.text);
@@ -185,7 +187,7 @@
   }
   function createSampleLibrary() {
     const projects = SAMPLE_CATALOG.map(sampleProject);
-    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'left', projects };
+    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', projects };
   }
   function unchangedLegacySample(project) {
     if (project.history.length || project.driveLink || project.protected === true) return false;
@@ -200,14 +202,15 @@
       stored.sampleCatalogVersion = 5;
       // Append only the new work; never replace drafts or switch selection.
       const retired = ['check-punctuation', 'check-ruby'];
-      if (!stored.projects.some(project => retired.includes(project.sampleId) || SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))) return stored;
+      if (!stored.projects.some(project => retired.includes(project.sampleId) || WITHDRAWN_SAMPLES.includes(project.sampleId) ||
+        SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))) return stored;
       stored.projects = stored.projects.filter(project => {
         if (!retired.includes(project.sampleId)) return true;
         if (unchangedLegacySample(project)) return false;
         delete project.sampleId; delete project.sampleProtected;
         return true;
       });
-      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['check-layout', 4], ['guide', 5]]) {
+      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['guide', 5]]) {
         if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
         const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
         try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
@@ -240,6 +243,16 @@
     stored.projects = orderStandardSamples(kept);
     stored.sampleCatalogVersion = 5;
     if (!kept.some(project => project.id === stored.activeId)) stored.activeId = kept[0].id;
+    sampleMigrationPending = true;
+    return stored;
+  }
+  // A protected copy of a withdrawn sample is the untouched original, so it goes;
+  // a copy someone made editable is their own manuscript and stays.
+  function withdrawSamples(stored) {
+    const kept = stored.projects.filter(project => !(project.sampleProtected && WITHDRAWN_SAMPLES.includes(project.sampleId)));
+    if (kept.length === stored.projects.length) return stored;
+    stored.projects = kept.length ? kept : [newProject()];
+    if (!stored.projects.some(project => project.id === stored.activeId)) stored.activeId = stored.projects[0].id;
     sampleMigrationPending = true;
     return stored;
   }
@@ -1311,7 +1324,7 @@
           }
         }
         if (!stored.projects.some(p => p.id === stored.activeId)) stored.activeId = stored.projects[0].id;
-        stored.version = 2; return protectSampleLibrary(curateSampleLibrary(stored));
+        stored.version = 2; return withdrawSamples(protectSampleLibrary(curateSampleLibrary(stored)));
       }
     } catch (error) {
       storageProtected = true;
