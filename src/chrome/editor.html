@@ -17,7 +17,7 @@
     <div class="panel-top panel-actions"><div class="panel-icons"><button id="flip-panel" class="flip-panel" type="button" title="パネルを反対側へ" aria-label="パネルを反対側へ">⇄</button><button id="hide-panel" class="flip-panel" type="button" title="パネルを隠す" aria-label="パネルを隠す">‹</button></div></div>
     <label for="name">原稿名</label>
     <input id="name" type="text" placeholder="無題">
-    <span id="sample-protection" class="small-note" hidden>見本の原文（保護中）</span><div class="panel-buttons"><button id="copy-sample" type="button" hidden>コピーして編集</button><button id="toggle-protection" type="button" aria-pressed="false">保護する</button></div>
+    <span id="sample-protection" class="small-note" hidden>保護中（書き換えられません）</span><div class="panel-buttons"><button id="copy-sample" type="button" hidden>コピーして編集</button><button id="toggle-protection" type="button" aria-pressed="false">保護する</button></div>
     <input id="panel-side" type="hidden" value="left">
     <div class="project-controls">
       <label for="project-select">原稿を切り替える</label><select id="project-select"></select>
@@ -64,11 +64,11 @@
   </section>
 </main>
 <div id="print-pages"></div>
-<dialog id="notices-dialog" aria-labelledby="notices-dialog-title">
+<dialog id="notices-dialog" aria-labelledby="notices-dialog-title"><div class="dialog-body">
   <h2 id="notices-dialog-title">作品と書体の出典</h2>
   <pre class="notices-text">{{NOTICES}}</pre>
   <div class="panel-buttons"><button id="notices-close" type="button" autofocus>閉じる</button></div>
-</dialog>
+</div></dialog>
 <dialog id="delete-dialog" aria-labelledby="delete-dialog-title">
   <h2 id="delete-dialog-title">この原稿を削除しますか？</h2>
   <p id="delete-project-name"></p>

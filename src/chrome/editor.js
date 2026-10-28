@@ -133,7 +133,7 @@
     const project = activeProject(), original = isOriginalSample(project), locked = isProtectedProject(project);
     input.readOnly = locked; name.readOnly = locked;
     document.getElementById('sample-protection').hidden = !locked;
-    document.getElementById('sample-protection').textContent = original ? '見本の原文（保護中）' : '保護中';
+    document.getElementById('sample-protection').textContent = '保護中（書き換えられません）';
     document.getElementById('copy-sample').hidden = !locked;
     document.getElementById('ruby-open').disabled = locked;
     document.getElementById('restore-version').disabled = locked || !activeProject().history.length;
@@ -1167,7 +1167,7 @@
     projectSelect.replaceChildren(...library.projects.map(project => {
       const option = document.createElement('option');
       option.value = project.id;
-      option.textContent = (project.title.trim() || '無題') + (isOriginalSample(project) ? '（原文）' : isProtectedProject(project) ? '（保護中）' : '');
+      option.textContent = (project.title.trim() || '無題') + (isProtectedProject(project) ? '（保護）' : '');
       return option;
     }));
     projectSelect.value = library.activeId;
@@ -1609,6 +1609,8 @@
   const noticesDialog = document.getElementById('notices-dialog');
   document.getElementById('notices-open').addEventListener('click', () => noticesDialog.showModal());
   document.getElementById('notices-close').addEventListener('click', () => noticesDialog.close());
+  // A click outside the box (on the backdrop, which targets the dialog itself) closes it.
+  noticesDialog.addEventListener('click', event => { if (event.target === noticesDialog) noticesDialog.close(); });
   const deleteDialog = document.getElementById('delete-dialog');
   let deleteTargetId = null;
   document.getElementById('delete-project').addEventListener('click', () => {

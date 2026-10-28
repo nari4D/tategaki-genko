@@ -163,7 +163,8 @@
   #delete-project-name { overflow-wrap: anywhere; white-space: pre-wrap; }
   #delete-dialog .danger-action { color: #9b3932; border-color: #cdb2ac; }
   @media print { #delete-dialog, #notices-dialog { display: none !important; } }
-  #notices-dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid #bacbbb; border-radius: 8px; color: var(--ink); padding: 22px; }
+  #notices-dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid #bacbbb; border-radius: 8px; color: var(--ink); padding: 0; }
+  #notices-dialog .dialog-body { padding: 22px; }
   #notices-dialog::backdrop { background: #172e264d; }
   #notices-dialog h2 { font-size: 18px; margin: 0 0 12px; }
   .notices-text { max-height: 60vh; margin: 0 0 14px; padding: 10px 12px; overflow: auto; border: 1px solid #e2e7e1; border-radius: 6px; background: #f7f9f6; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
