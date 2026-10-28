@@ -220,6 +220,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .plate.step > img.native { width: 260px; }
   .row.steps { column-gap: 20px; }
   main:has(.demo) { padding: 30px calc(var(--rail) + 12px) 12px 12px; }
+  main:has(.demo) .row { margin-bottom: 0; }
   /* Set the whole step vertically, caption on the right, so the figure is only as
      wide as its picture and caption (a vertical caption inside a horizontal box
      was sized as if it took two columns). */

@@ -60,8 +60,8 @@ function render({ name, title, description, body, up = '' }) {
 <main>
 ${body.trim()}
 </main>
-<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">パソコン版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 〔作者名〕</span></div></footer>
-</body>
+${name === 'try' && !up ? '' /* ためし書き ends with the demo */ : `<footer><div class="colophon"><span class="title">縦書き原稿用紙</span><span class="sub">パソコン版Chromeブラウザの拡張機能</span>${footer.map(link).join('')}<span class="copy">© 2026 〔作者名〕</span></div></footer>
+`}</body>
 </html>
 `;
 }
