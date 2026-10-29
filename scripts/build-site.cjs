@@ -6,10 +6,10 @@ const fs = require('node:fs'), path = require('node:path'), zlib = require('node
 const { entries, version } = require('./source-files.cjs');
 const { highlight, languageOf } = require('./highlight.cjs');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
-// The menu lists pages, never sections of a page. The terms page is in the
-// footer only. There is no contact page: the address is given in the store only.
-const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き']];
-const footer = [...nav, ['legal', 'ご利用について']];
+// The menu lists pages, never sections of a page; the footer repeats it.
+// There is no contact page: the address is given in the store only.
+const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き'], ['legal', 'ご利用について']];
+const footer = nav;
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'images'), { recursive: true });
