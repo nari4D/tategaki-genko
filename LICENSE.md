@@ -1,39 +1,95 @@
-# 縦書き原稿用紙 ライセンス
+Required Notice: Copyright 2026 お鋳成（OINARI） (https://tategaki-genko.pages.dev/)
 
-© 2026 お鋳成（OINARI）
+Licensor Line of Business: Software for writing Japanese vertically on genko yoshi manuscript paper (https://tategaki-genko.pages.dev/)
 
-このライセンスは、拡張機能「縦書き原稿用紙」（ソースコード・画像・文章を含みます。以下「このプログラム」）と、紹介サイトの文章・画像を使うことを、次の範囲で認めるものです。著作権を譲るものではありません。
+These terms do not cover the fonts in assets/fonts (SIL Open Font License 1.1, see each OFL.txt) or the sample literary works in data/literature (public domain in Japan, from Aozora Bunko).
 
-## 1. 自由にできること
+# PolyForm Shield License 1.0.0
 
-- だれでも無料で使うこと。個人・学校・会社など、使う人や目的は問いません。
-- このプログラムで書いた原稿を、提出・応募・出版・販売・公開すること。
-- 人に勧めること。使い方の説明や紹介のために、画面の写しを載せること（授業の資料、ブログ、SNSなど）。
-- ソースコードを読むこと。著作権法で認められた範囲で、その一部を引用すること。
-- 自分や自分の組織の中で使うために、ソースコードを直すこと。
-- GitHubの機能で複製（フォーク）すること。GitHubの利用規約で認められた範囲に限ります。
+<https://polyformproject.org/licenses/shield/1.0.0>
 
-## 2. できないこと（直したものも同じです）
+## Acceptance
 
-- このプログラムの全部または一部の複製を、ネットやストア（Chromeウェブストアなど）で公開したり、組織の外の人に渡したりすること
-- このプログラムを販売すること、有料のサービスや製品に組み込むこと
+In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
 
-ここに書いていない使い方は、著作権法に従います。
+## Copyright License
 
-## 3. 著作権
+The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
 
-- このプログラムと、紹介サイトの文章・画像：お鋳成（OINARI）
-- 直した部分：直した人。ただし、直したものにもこのライセンスが及びます。
-- このプログラムで書いた原稿と、保存したファイル（JSON・TXT・PDF）：書いた人。このライセンスの制限は及びません。
-- 書体（クレー One、よもぎ）：それぞれの作者。SIL Open Font License 1.1に従い、原稿やPDFにも自由に使えます。
-- 見本の作品：日本で著作権の保護期間が満了した作品で、青空文庫の取り扱い規準に従います。
+## Distribution License
 
-書体と見本の作品には、このライセンスは及びません。
+The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
 
-## 4. 保証
+## Notices
 
-このプログラムは、いまある姿のまま提供します。不具合がないことはお約束できません。故意または重大な過失による場合を除き、使ったことで生じた損害（原稿の消失を含みます）について、お鋳成（OINARI）は責任を負いません。
+You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
 
-## 5. 違反したとき
+> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
 
-このライセンスを守らない場合、このプログラムを使う許可はなくなります。
+## Changes and New Works License
+
+The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
+
+## Patent License
+
+The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+
+## Noncompete
+
+Any purpose is a permitted purpose, except for providing any product that competes with the software or any product the licensor or any of its affiliates provides using the software.
+
+## Competition
+
+Goods and services compete even when they provide functionality through different kinds of interfaces or for different technical platforms.  Applications can compete with services, libraries with plugins, frameworks with development tools, and so on, even if they're written in different programming languages or for different computer architectures.  Goods and services compete even when provided free of charge.  If you market a product as a practical substitute for the software or another product, it definitely competes.
+
+## New Products
+
+If you are using the software to provide a product that does not compete, but the licensor or any of its affiliates brings your product into competition by providing a new version of the software or another product using the software, you may continue using versions of the software available under these terms beforehand to provide your competing product, but not any later versions.
+
+## Discontinued Products
+
+You may begin using the software to compete with a product or service that the licensor or any of its affiliates has stopped providing, unless the licensor includes a plain-text line beginning with `Licensor Line of Business:` with the software that mentions that line of business.  For example:
+
+> Licensor Line of Business: YoyodyneCMS Content Management System (http://example.com/cms)
+
+## Sales of Business
+
+If the licensor or any of its affiliates sells a line of business developing the software or using the software to provide a product, the buyer can also enforce [Noncompete](#noncompete) for that product.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the law. These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+
+A **product** can be a good or service, or a combination of them.
+
+**You** refers to the individual or entity agreeing to these terms.
+
+**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all its affiliates.
+
+**Affiliates** means the other organizations than an organization has control over, is under the control of, or is under common control with.
+
+**Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the software under these terms.
+
+**Use** means anything you do with the software requiring one of your licenses.

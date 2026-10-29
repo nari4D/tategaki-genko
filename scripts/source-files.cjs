@@ -36,49 +36,21 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 ## ライセンス
 
-著作権はお鋳成（OINARI）にあります。だれでも無料で使え、書いた原稿は書いた人のものです。ソースコードは読むことも、自分や自分の組織の中で直して使うこともできます。複製を公開する・組織の外の人に渡す・販売することはできません。全文は [LICENSE.md](LICENSE.md) にあります。
+[PolyForm Shield License 1.0.0](LICENSE.md) です。正式な条件は英語の原文で、次はその要約です。
+
+- だれでも無料で使え、直して使えます。書いた原稿は書いた人のものです。
+- この拡張機能や、お鋳成（OINARI）がこのソースコードを使って出す製品と競合するものは、出せません。無料でも、直したものでも同じです。
+- 書体（クレー One、よもぎ）はSIL Open Font License 1.1、見本の作品は青空文庫の取り扱い規準に従い、このライセンスは及びません。
 `,
-  // In the same order as the site's 「ご利用について」 (legal.html), which sums it up.
-  'LICENSE.md': `# 縦書き原稿用紙 ライセンス
+  // The licence is PolyForm Shield 1.0.0, word for word, after the two lines it asks
+  // the licensor to add. The site's 「ご利用について」 (legal.html) sums it up in Japanese.
+  'LICENSE.md': `Required Notice: Copyright 2026 お鋳成（OINARI） (https://tategaki-genko.pages.dev/)
 
-© 2026 お鋳成（OINARI）
+Licensor Line of Business: Software for writing Japanese vertically on genko yoshi manuscript paper (https://tategaki-genko.pages.dev/)
 
-このライセンスは、拡張機能「縦書き原稿用紙」（ソースコード・画像・文章を含みます。以下「このプログラム」）と、紹介サイトの文章・画像を使うことを、次の範囲で認めるものです。著作権を譲るものではありません。
+These terms do not cover the fonts in assets/fonts (SIL Open Font License 1.1, see each OFL.txt) or the sample literary works in data/literature (public domain in Japan, from Aozora Bunko).
 
-## 1. 自由にできること
-
-- だれでも無料で使うこと。個人・学校・会社など、使う人や目的は問いません。
-- このプログラムで書いた原稿を、提出・応募・出版・販売・公開すること。
-- 人に勧めること。使い方の説明や紹介のために、画面の写しを載せること（授業の資料、ブログ、SNSなど）。
-- ソースコードを読むこと。著作権法で認められた範囲で、その一部を引用すること。
-- 自分や自分の組織の中で使うために、ソースコードを直すこと。
-- GitHubの機能で複製（フォーク）すること。GitHubの利用規約で認められた範囲に限ります。
-
-## 2. できないこと（直したものも同じです）
-
-- このプログラムの全部または一部の複製を、ネットやストア（Chromeウェブストアなど）で公開したり、組織の外の人に渡したりすること
-- このプログラムを販売すること、有料のサービスや製品に組み込むこと
-
-ここに書いていない使い方は、著作権法に従います。
-
-## 3. 著作権
-
-- このプログラムと、紹介サイトの文章・画像：お鋳成（OINARI）
-- 直した部分：直した人。ただし、直したものにもこのライセンスが及びます。
-- このプログラムで書いた原稿と、保存したファイル（JSON・TXT・PDF）：書いた人。このライセンスの制限は及びません。
-- 書体（クレー One、よもぎ）：それぞれの作者。SIL Open Font License 1.1に従い、原稿やPDFにも自由に使えます。
-- 見本の作品：日本で著作権の保護期間が満了した作品で、青空文庫の取り扱い規準に従います。
-
-書体と見本の作品には、このライセンスは及びません。
-
-## 4. 保証
-
-このプログラムは、いまある姿のまま提供します。不具合がないことはお約束できません。故意または重大な過失による場合を除き、使ったことで生じた損害（原稿の消失を含みます）について、お鋳成（OINARI）は責任を負いません。
-
-## 5. 違反したとき
-
-このライセンスを守らない場合、このプログラムを使う許可はなくなります。
-`,
+` + fs.readFileSync(path.join(root, 'assets/licenses/PolyForm-Shield-1.0.0.md'), 'utf8'),
   'package.json': JSON.stringify({ name: 'tategaki-genko', version, private: true, scripts: { build: 'node scripts/build-chrome-extension.cjs' } }, null, 2) + '\n',
   '.gitignore': 'chrome-extension/\nsite/public/\n',
   // Check files out byte for byte, so they match the SHA-256 list on the site.
@@ -87,7 +59,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 // The site's own source, for the GitHub repository only (not in the ZIP).
 const siteFiles = () => [
-  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
+  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'assets/licenses/PolyForm-Shield-1.0.0.md', 'site/style.css', 'site/demo/demo.js',
   ...['pages', 'images'].flatMap(dir => fs.readdirSync(path.join(root, 'site', dir)).map(name => `site/${dir}/${name}`))
 ];
 // Cloudflare Pages builds the site with this Node.js version.
