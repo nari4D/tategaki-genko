@@ -8,7 +8,7 @@ const { highlight, languageOf } = require('./highlight.cjs');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
 // The menu lists pages, never sections of a page; the footer repeats it.
 // There is no contact page: the address is given in the store only.
-const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き'], ['legal', 'ご利用について']];
+const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き'], ['policy', 'ご利用について']];
 const footer = nav;
 
 fs.rmSync(out, { recursive: true, force: true });
@@ -34,11 +34,18 @@ if (!siteLink.test(editorPage)) throw Error('editor.html: site link not found');
 fs.writeFileSync(path.join(demo, 'editor.html'), editorPage
   .replace(siteLink, '')
   .replace('<script src="startup.js"></script>', '<script src="startup.js"></script>\n<script src="demo.js"></script>')
-  .replace('<title>縦書き原稿用紙</title>', '<title>ためし書き — 縦書き原稿用紙</title>\n<meta name="robots" content="noindex">'));
+  .replace('<title>縦書き原稿用紙</title>', '<title>ためし書き — 縦書き原稿用紙</title>\n<meta name="robots" content="noindex">\n' + favicon('../')));
+// The favicon is the extension's own icon, as built above.
+for (const size of [16, 32]) fs.copyFileSync(path.join(built, 'icons', `genko-${size}.png`), path.join(out, `favicon-${size}.png`));
 fs.writeFileSync(path.join(out, '_headers'), `/try/*
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
 `);
+// The copyright and privacy page was legal.html while it also listed the terms.
+fs.writeFileSync(path.join(out, '_redirects'), '/legal.html /policy.html 301\n/legal /policy 301\n');
 
+function favicon(up) {
+  return [16, 32].map(size => `<link rel="icon" type="image/png" sizes="${size}x${size}" href="${up}favicon-${size}.png">`).join('\n');
+}
 // `up` is '' for top-level pages and '../' for pages under source/.
 function render({ name, title, description, body, up = '' }) {
   const link = ([target, label]) => {
@@ -53,6 +60,7 @@ function render({ name, title, description, body, up = '' }) {
 <title>${name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙'}</title>
 <meta name="description" content="${description}">
 <meta name="robots" content="noindex">
+${favicon(up)}
 <link rel="stylesheet" href="${up}style.css">
 </head>
 <body>

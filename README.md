@@ -14,4 +14,4 @@ Node.js 22以降で次のコマンドを実行すると、`chrome-extension` フ
 
 ## 著作権
 
-© 2026 お鋳成（OINARI）All rights reserved. 自由に使える範囲は [COPYRIGHT.md](COPYRIGHT.md) にあります。
+© 2026 お鋳成（OINARI）All rights reserved. 自由に使ってよいことは [COPYRIGHT.md](COPYRIGHT.md) にあります。
