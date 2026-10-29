@@ -28,7 +28,11 @@ fs.cpSync(path.join(built, 'fonts'), path.join(demo, 'fonts'), { recursive: true
 fs.copyFileSync(path.join(site, 'demo', 'demo.js'), path.join(demo, 'demo.js'));
 const editorPage = fs.readFileSync(path.join(built, 'editor.html'), 'utf8');
 if (editorPage.split('<script src="startup.js"></script>').length !== 2) throw Error('editor.html: startup.js script tag not found once');
+// ためし書き is already on the site, so its panel leaves out the link to it.
+const siteLink = /　<a id="site-link"[^>]*>[^<]*<\/a>/;
+if (!siteLink.test(editorPage)) throw Error('editor.html: site link not found');
 fs.writeFileSync(path.join(demo, 'editor.html'), editorPage
+  .replace(siteLink, '')
   .replace('<script src="startup.js"></script>', '<script src="startup.js"></script>\n<script src="demo.js"></script>')
   .replace('<title>縦書き原稿用紙</title>', '<title>ためし書き — 縦書き原稿用紙</title>\n<meta name="robots" content="noindex">'));
 fs.writeFileSync(path.join(out, '_headers'), `/try/*
