@@ -164,6 +164,10 @@ th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(-
 .plate { max-width: 1120px; margin: 0 auto 44px; display: flex; flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 22px; }
 .plate img, .plate video { width: min(820px, 100%); height: auto; border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2418; }
 .plate figcaption { writing-mode: vertical-rl; text-orientation: upright; font-size: 14px; color: var(--muted); max-height: 520px; }
+/* A picture's or video's note sits under it, set across, on every screen (the steps of
+   はじめかた keep their vertical words beside the picture). */
+.plate:not(.step) { flex-direction: column; align-items: center; }
+.plate:not(.step) figcaption { writing-mode: horizontal-tb; max-height: none; font-variant-east-asian: normal; }
 /* Step pictures: smaller, the toolbar pictures one above the other, the caption is the step itself. */
 /* ためし書き: the editor itself, filling the window (its own note says nothing is
    saved). On a phone only a note is shown, since the editor is made for a computer. */
