@@ -1,4 +1,4 @@
-const additionalLiterary = require('../data/literature/kumo-no-ito.json');
+const sangetsuki = require('../data/literature/sangetsuki.json');
 const chumon = require('../data/literature/chumon-no-oi-ryoriten.json');
 
 function unmark(marked) {
@@ -22,7 +22,7 @@ function unmark(marked) {
 // These sample words cross a column, where a whole-word reading is not shown.
 // Their per-character readings are standard; never split other words by guess.
 const characterReadings = new Map([['見舞', 'み｜まい'], ['大歓迎', 'だい｜かん｜げい'], ['支度', 'し｜たく'],
-  ['間抜', 'ま｜ぬ'], ['犍陀多', 'かん｜だ｜た']]);
+  ['間抜', 'ま｜ぬ'], ['容貌', 'よう｜ぼう'], ['豊頬', 'ほう｜きょう'], ['汝水', 'じょ｜すい']]);
 function splitReadings(marked) {
   return marked.replace(/\[\[([^|]+)\|([^\]]+)\]\]/gu, (whole, base, reading) => {
     const split = characterReadings.get(base);
@@ -33,31 +33,23 @@ function splitReadings(marked) {
 }
 
 const previousSamples = [
-  { sampleId: additionalLiterary.id, title: '蜘蛛の糸 — 芥川龍之介', font: 'mincho',
-    ...unmark('　　' + additionalLiterary.title + '\n' + '　'.repeat(14) + additionalLiterary.author + '\n' + splitReadings(additionalLiterary.markedBody)) },
+  { sampleId: sangetsuki.id, title: '山月記 — 中島敦', font: 'mincho',
+    ...unmark('　　' + sangetsuki.title + '\n' + '　'.repeat(14) + sangetsuki.author + '\n' + splitReadings(sangetsuki.markedBody)) },
   { sampleId: chumon.id, title: '注文の多い料理店 — 宮沢賢治', font: 'mincho',
     ...unmark('　　' + chumon.title + '\n' + '　'.repeat(14) + chumon.author + '\n' + splitReadings(chumon.markedBody)) }
 ];
-const literatureOrder = [chumon.id, additionalLiterary.id];
+const literatureOrder = [chumon.id, sangetsuki.id];
 const samples = [
   { sampleId: 'guide', title: 'はじめに', font: 'mincho', ...unmark(require('../data/guide.cjs')) },
   ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id))
 ];
 
-// What the in-app sources dialog lists: the colophon Aozora Bunko asks reusers
-// to keep, the library card, and what this app changed.
+// The in-app sources dialog: only where the sample texts come from.
 const notice = [
   '見本の作品', '',
-  chumon.title + '／' + chumon.author,
-  '底本：「' + chumon.baseBook + '」' + chumon.publisher, chumon.baseEdition,
-  '入力：' + chumon.inputBy, '校正：' + chumon.proofreadBy.join('、'), '2005年1月26日作成',
-  chumon.originNotice, '図書カード：' + chumon.cardUrl,
-  '変更：看板の字下げを全角空白に置き換え、題名と著者名の2行を加えました。', '',
-  additionalLiterary.title + '／' + additionalLiterary.author,
-  '底本：「' + additionalLiterary.baseBook + '」' + additionalLiterary.publisher, additionalLiterary.baseEdition,
-  '入力：' + additionalLiterary.inputBy, '校正：' + additionalLiterary.proofreadBy.join('、'), '1997年11月10日公開、2011年1月28日修正',
-  additionalLiterary.originNotice, '図書カード：' + additionalLiterary.cardUrl,
-  '変更：章見出しと末尾の日付の字下げを全角空白に、外字1字を「犍」に置き換え、題名と著者名の2行を加えました。', ''
+  chumon.title + '（' + chumon.author + '）',
+  sangetsuki.title + '（' + sangetsuki.author + '）',
+  '出典：青空文庫（https://www.aozora.gr.jp/）', ''
 ].join('\n');
 
-module.exports = { samples, additionalLiterary, chumon, notice, unmark };
+module.exports = { samples, sangetsuki, chumon, notice, unmark };

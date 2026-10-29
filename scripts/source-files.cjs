@@ -11,7 +11,7 @@ const files = [
   'src/chrome/background.js', 'src/chrome/print-geometry.cjs',
   'scripts/build-chrome-extension.cjs', 'scripts/manuscript-samples.cjs', 'scripts/vertical-alternates.json',
   'data/guide.cjs', 'data/chrome/legacy-samples.json',
-  'data/literature/kumo-no-ito.json', 'data/literature/chumon-no-oi-ryoriten.json',
+  'data/literature/sangetsuki.json', 'data/literature/chumon-no-oi-ryoriten.json',
   'assets/fonts/klee-one/KleeOne-Regular.woff2', 'assets/fonts/klee-one/OFL.txt',
   'assets/fonts/yomogi/Yomogi-Regular.woff2', 'assets/fonts/yomogi/OFL.txt'
 ];

@@ -83,9 +83,9 @@
   // Unedited samples of earlier editions, recognised so they can be retired.
   // Filled at build time from data/chrome/legacy-samples.json.
   const LEGACY_SAMPLES = /* build: LEGACY_SAMPLES */[];
-  // Samples withdrawn from the catalog for 1.0.0: 「去年の木」 and the layout check.
-  const WITHDRAWN_SAMPLES = ['aozora-4719', 'check-layout'];
-  const WITHDRAWN_TITLES = ['去年の木 — 新美南吉', '確認用：原稿用紙とふりがな', '確認用：句読点・かっこ', '確認用：ふりがな'];
+  // Samples withdrawn from the catalog for 1.0.0: 「去年の木」, 「蜘蛛の糸」 and the layout check.
+  const WITHDRAWN_SAMPLES = ['aozora-4719', 'aozora-92', 'check-layout'];
+  const WITHDRAWN_TITLES = ['去年の木 — 新美南吉', '蜘蛛の糸 — 芥川龍之介', '確認用：原稿用紙とふりがな', '確認用：句読点・かっこ', '確認用：ふりがな'];
   let sampleMigrationPending = false;
   function sampleProject(example) {
     const project = newProject(example.title, example.text);
@@ -191,7 +191,7 @@
   // The first start opens a blank manuscript; the samples wait in the switcher.
   function createSampleLibrary() {
     const projects = [newProject(), ...SAMPLE_CATALOG.map(sampleProject)];
-    return { version: 2, sampleCatalogVersion: 5, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', panelSideVersion: 1, projects };
+    return { version: 2, sampleCatalogVersion: 6, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', panelSideVersion: 1, projects };
   }
   function unchangedLegacySample(project) {
     if (project.history.length || project.driveLink || project.protected === true) return false;
@@ -200,10 +200,10 @@
       JSON.stringify(project.rubies || []) === JSON.stringify(example.rubies || []));
   }
   function curateSampleLibrary(stored) {
-    if (stored.sampleCatalogVersion >= 5) return stored;
+    if (stored.sampleCatalogVersion >= 6) return stored;
     if (stored.sampleCatalogVersion >= 1) {
       const previousCatalog = stored.sampleCatalogVersion;
-      stored.sampleCatalogVersion = 5;
+      stored.sampleCatalogVersion = 6;
       // Append only the new work; never replace drafts or switch selection.
       const retired = ['check-punctuation', 'check-ruby'];
       if (!stored.projects.some(project => retired.includes(project.sampleId) || WITHDRAWN_SAMPLES.includes(project.sampleId) ||
@@ -214,7 +214,7 @@
         delete project.sampleId; delete project.sampleProtected;
         return true;
       });
-      for (const [id, introduced] of [['aozora-92', 2], ['aozora-43754', 3], ['guide', 5]]) {
+      for (const [id, introduced] of [['aozora-43754', 3], ['guide', 5], ['aozora-624', 6]]) {
         if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
         const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
         try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
@@ -233,7 +233,7 @@
     if (!stored.projects.some(project => LEGACY_SAMPLES.some(example => project.title === example.title))) {
       // Mark this in memory too, so an intentionally imported old sample is not
       // mistaken for pre-update clutter at the following restart.
-      stored.sampleCatalogVersion = 5;
+      stored.sampleCatalogVersion = 6;
       return stored;
     }
     const kept = stored.projects.filter(project => !unchangedLegacySample(project));
@@ -245,7 +245,7 @@
       kept.push(candidate);
     }
     stored.projects = orderStandardSamples(kept);
-    stored.sampleCatalogVersion = 5;
+    stored.sampleCatalogVersion = 6;
     if (!kept.some(project => project.id === stored.activeId)) stored.activeId = kept[0].id;
     sampleMigrationPending = true;
     return stored;
