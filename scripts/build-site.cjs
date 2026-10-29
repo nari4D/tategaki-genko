@@ -61,6 +61,7 @@ function render({ name, title, description, body, up = '' }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙'}</title>
 <meta name="description" content="${description}">
+<meta name="robots" content="noindex">
 ${up ? '' : `<link rel="canonical" href="${SITE_URL}${name === 'index' ? '' : name}">\n`}${favicon(up)}
 <link rel="stylesheet" href="${up}style.css">
 </head>
