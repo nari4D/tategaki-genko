@@ -232,7 +232,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   /* Set the whole step vertically, caption on the right, so the figure is only as
      wide as its picture and caption (a vertical caption inside a horizontal box
      was sized as if it took two columns). */
-  .plate.step { writing-mode: vertical-rl; flex-direction: column-reverse; justify-content: flex-start; height: 440px; }
+  .plate.step { writing-mode: vertical-rl; flex-direction: column; justify-content: flex-start; height: 440px; }
   .plate.step .shots { writing-mode: horizontal-tb; }
   main > .code-page { margin: 0 auto 44px; }
 }
@@ -282,8 +282,8 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .hero .buttons { display: none; }
   .hero .more { display: none; }
   .hero .narrow { display: block; }
-  /* Title, a blank column and four lines: nine columns fit a 360px screen. */
-  .hero { padding: 24px 12px; }
+  /* Title, a blank column and five lines: ten columns fit a 360px screen. */
+  .hero { padding: 24px 7px; }
   .demo { display: none; }
   .spread.demo-phone { display: block; }
   .plate { flex-direction: column; align-items: center; }

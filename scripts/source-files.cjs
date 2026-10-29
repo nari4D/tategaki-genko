@@ -39,7 +39,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 © 2026 お鋳成（OINARI）All rights reserved. 自由に使ってよいことは [COPYRIGHT.md](COPYRIGHT.md) にあります。
 `,
   // No licence: all rights reserved, with only what anyone may do spelled out, as the
-  // site's top page (「ご自由にどうぞ」) does.
+  // site's questions and 「ご利用について」 do.
   'COPYRIGHT.md': `# 著作権について
 
 © 2026 お鋳成（OINARI）All rights reserved.
