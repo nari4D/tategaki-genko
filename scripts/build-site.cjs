@@ -99,7 +99,7 @@ fs.writeFileSync(path.join(out, 'source', 'index.html'), render({
   body: `<article class="code-page">
 <h1>ソースコード（${version}）</h1>
 <p>Chromeウェブストアで公開する拡張機能は、この一式から作ります。Node.js 22以降で <code>node scripts/build-chrome-extension.cjs</code> を実行すると、<code>chrome-extension</code> フォルダーに拡張機能が作られます。</p>
-<p><a class="download" href="${zipName}" download>一式をダウンロード（ZIP、${zipSize}MB）</a>　<a href="LICENSE.md.html">ライセンス</a></p>
+<p><a class="download" href="${zipName}" download>一式をダウンロード（ZIP、${zipSize}MB）</a>　<a href="COPYRIGHT.md.html">著作権について</a></p>
 <div class="table-wrap"><table class="files"><thead><tr><th>ファイル</th><th>行数</th><th>SHA-256</th></tr></thead><tbody>
 ${rows.join('\n')}
 </tbody></table></div>

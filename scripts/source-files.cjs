@@ -34,23 +34,30 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 このリポジトリには、紹介サイト（https://tategaki-genko.pages.dev）の元ファイル（\`site/\`）も入っています。\`node scripts/build-site.cjs\` を実行すると、\`site/public\` フォルダーにサイトが書き出されます。
 
-## ライセンス
+## 著作権
 
-[PolyForm Shield License 1.0.0](LICENSE.md) です。正式な条件は英語の原文で、次はその要約です。
-
-- だれでも無料で使え、直して使えます。書いた原稿は書いた人のものです。
-- この拡張機能や、お鋳成（OINARI）がこのソースコードを使って出す製品と競合するものは、出せません。無料でも、直したものでも同じです。
-- 書体（クレー One、よもぎ）はSIL Open Font License 1.1、見本の作品は青空文庫の取り扱い規準に従い、このライセンスは及びません。
+© 2026 お鋳成（OINARI）All rights reserved. できることは [COPYRIGHT.md](COPYRIGHT.md) にあります。
 `,
-  // The licence is PolyForm Shield 1.0.0, word for word, after the two lines it asks
-  // the licensor to add. The site's 「ご利用について」 (legal.html) sums it up in Japanese.
-  'LICENSE.md': `Required Notice: Copyright 2026 お鋳成（OINARI） (https://tategaki-genko.pages.dev/)
+  // No licence: all rights reserved, with only what anyone may do spelled out, as the
+  // site's 「ご利用について」 (legal.html) does.
+  'COPYRIGHT.md': `# 著作権について
 
-Licensor Line of Business: Software for writing Japanese vertically on genko yoshi manuscript paper (https://tategaki-genko.pages.dev/)
+© 2026 お鋳成（OINARI）All rights reserved.
 
-These terms do not cover the fonts in assets/fonts (SIL Open Font License 1.1, see each OFL.txt) or the sample literary works in data/literature (public domain in Japan, from Aozora Bunko).
+拡張機能「縦書き原稿用紙」と、このリポジトリのソースコード・画像・文章の著作権は、お鋳成（OINARI）にあります。
 
-` + fs.readFileSync(path.join(root, 'assets/licenses/PolyForm-Shield-1.0.0.md'), 'utf8'),
+## できること
+
+- 使う：だれでも無料で、目的を問わず使えます。個人でも、学校や会社でも使えます。
+- 原稿：書いた原稿は書いた人のものです。提出も応募も、出版や販売も自由です。
+- 紹介：人に勧めたり、画面の写しを資料やブログ、SNSに載せたりできます。
+- 直す：ソースコードを読み、自分用に直して使えます。
+
+## 書体と見本の作品
+
+- 書体（クレー One、よもぎ）は、それぞれの作者のものです。SIL Open Font License 1.1 に従い（\`assets/fonts/*/OFL.txt\`）、原稿やPDFにも自由に使えます。
+- 見本の作品（注文の多い料理店、山月記）は、日本で著作権の保護期間が満了した作品で、青空文庫から収めています。
+`,
   'package.json': JSON.stringify({ name: 'tategaki-genko', version, private: true, scripts: { build: 'node scripts/build-chrome-extension.cjs' } }, null, 2) + '\n',
   '.gitignore': 'chrome-extension/\nsite/public/\n',
   // Check files out byte for byte, so they match the SHA-256 list on the site.
@@ -59,7 +66,7 @@ These terms do not cover the fonts in assets/fonts (SIL Open Font License 1.1, s
 
 // The site's own source, for the GitHub repository only (not in the ZIP).
 const siteFiles = () => [
-  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'assets/licenses/PolyForm-Shield-1.0.0.md', 'site/style.css', 'site/demo/demo.js',
+  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
   ...['pages', 'images'].flatMap(dir => fs.readdirSync(path.join(root, 'site', dir)).map(name => `site/${dir}/${name}`))
 ];
 // Cloudflare Pages builds the site with this Node.js version.
