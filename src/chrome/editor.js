@@ -436,6 +436,8 @@
   }
   // VIEWPORT_LAYOUT_20_END
   function fitPaper() {
+    // The overview spreads the paper across the window; the sheet size waits for the normal view.
+    if (overviewMode) return;
     const width = document.documentElement.clientWidth || window.innerWidth;
     const height = document.documentElement.clientHeight || window.innerHeight;
     const paper = document.getElementById('paper-scroll');
@@ -489,6 +491,8 @@
       requestAnimationFrame(() => pages.children[current]?.scrollIntoView({ block: 'center' }));
     }
     else {
+      // Size the sheets before scrolling, or the page chosen would drift as they settle.
+      fitPaper();
       render();
       requestAnimationFrame(() => {
         if (targetPage === null) window.scrollTo(0, returnScrollY);
