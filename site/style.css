@@ -25,6 +25,11 @@ img { max-width: 100%; height: auto; display: block; }
    ascender (l) meet in a vertical line. Full-width forms centre each letter in its cell. */
 :is(.spread, .rail, .colophon, .band-title, .plate figcaption) { font-variant-east-asian: full-width; }
 .tcy { text-combine-upright: all; font-variant-east-asian: normal; }
+/* A sentence that just fills a column (29 characters) on a wide screen: no indent, and
+   a line break that only shorter columns use, a phone's or a screen up to 680px tall. */
+.flush { text-indent: 0; }
+.phone-break { display: none; }
+@media (max-height: 680px) { .phone-break { display: inline; } }
 
 
 /* Right-hand rail: brand and pages, set vertically. Latin letters stand upright. */
@@ -111,6 +116,10 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
    next column, one square down; a blank column before each question. */
 .faq > li { padding-inline-start: 1em; margin-block-end: var(--lh); }
 .faq > li:last-child { margin-block-end: 0; }
+/* With blank columns between them the seven questions need a screen about 1194px wide.
+   Narrower, they run on without them and the sheet's sides are half as wide, so it fits
+   down to a 1014px screen without scrolling sideways. */
+@media (min-width: 761px) and (max-width: 1200px) { .faq > li { margin-block-end: 0; } #faq { padding-inline: calc(var(--lh) / 2); } }
 .faq .key { display: block; margin-inline-start: -1em; }
 /* A section made only of pictures: its title stands on the page itself, set
    vertically like the captions, with no sheet of manuscript paper. */
@@ -285,6 +294,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .hero .buttons { display: none; }
   .hero .more { display: none; }
   .hero .narrow { display: block; }
+  .phone-break { display: inline; }
   /* Title, a blank column and five lines: ten columns fit a 360px screen. */
   .hero { padding: 24px 7px; }
   .demo { display: none; }
