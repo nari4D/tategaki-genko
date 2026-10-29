@@ -24,7 +24,6 @@ img { max-width: 100%; height: auto; display: block; }
 /* Upright half-width letters sit on the Latin baseline, so a descender (g) and the next
    ascender (l) meet in a vertical line. Full-width forms centre each letter in its cell. */
 :is(.spread, .rail, .colophon, .band-title, .plate figcaption) { font-variant-east-asian: full-width; }
-.tcy { text-combine-upright: all; font-variant-east-asian: normal; }
 /* A sentence of 29 characters (with its indent) kept to one column: on a short screen or
    a phone its type shrinks just enough to fit the sheet's height. */
 .one-line { font-size: min(1em, calc((var(--spread-h) - 72px) / 29.5)); }
@@ -61,8 +60,6 @@ main { padding: 40px calc(var(--rail) + 32px) 24px 32px; }
    not a mostly empty sheet. */
 .spread, .pages { width: fit-content; min-width: min(100%, 560px); margin-inline: auto; }
 .hero { width: 100%; }
-/* A short note at the end is a narrow slip on every screen, not a mostly empty sheet. */
-.spread.slip { width: fit-content; min-width: 0; }
 .spread * { margin-block: 0; }
 /* Nothing trails the last column, so a full page does not scroll sideways. */
 .spread > :last-child { margin-block-end: 0; }
@@ -76,16 +73,9 @@ h3 { font-size: 18px; line-height: var(--lh); color: var(--shu); }
 p, li, dt, dd, summary, figcaption { line-height: var(--lh); }
 p { text-indent: 1em; }
 .lead { font-size: 19px; }
-.spaced { margin-block-end: var(--lh); }
-/* Every paragraph starts one square down, as on manuscript paper; a date and name line does not. */
-.byline { text-indent: 0; }
 .key { color: var(--shu); font-weight: 600; }
 .small { font-size: 14px; color: var(--muted); }
 ul { padding-inline-start: 1.6em; }
-/* Numbers are kanji written into the text, so they sit upright in the column like
-   every other character (a list marker would lie on its side). */
-ol { list-style: none; padding: 0; counter-reset: item; }
-ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "　"; color: var(--shu); font-weight: 600; }
 /* Items led by a word in vermilion, each starting a new column. */
 .plain { list-style: none; padding: 0; }
 /* Hanging indent: the label stands alone at the top of the first column and every
@@ -97,12 +87,9 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 .steps > li { padding-inline-start: 2em; text-indent: -2em; margin-block-end: var(--lh); }
 .steps > li:last-child { margin-block-end: 0; }
 .steps:not(:last-child) { margin-block-end: var(--lh); }
-/* Questions: the question takes its own column, the answer is indented below it. */
-.qa > li { padding-inline-start: 1em; margin-block-end: var(--lh); }
 /* No empty column after the last item of a section. */
-.hang > li:last-child, .qa > li:last-child { margin-block-end: 0; }
-.pages > .spread:not(:last-child) :is(.hang, .qa, .steps, .faq) > li:last-child { margin-block-end: var(--lh); }
-.qa .key { display: block; margin-inline-start: -1em; }
+.hang > li:last-child { margin-block-end: 0; }
+.pages > .spread:not(:last-child) :is(.hang, .steps, .faq) > li:last-child { margin-block-end: var(--lh); }
 /* One-line items run column after column, like a list of specifications. */
 .hang.tight > li, .pages > .spread:not(:last-child) .hang.tight > li:last-child { margin-block-end: 0; }
 .pledge { font-size: 20px; font-weight: 600; color: var(--shu); }
@@ -124,9 +111,6 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
 .band-title { writing-mode: vertical-rl; text-orientation: upright; margin: 0; height: 440px; line-height: var(--lh); }
 /* A step: its kanji number hangs, the text below it. */
 .step { text-indent: 0; padding-inline-start: 2em; text-indent: -2em; }
-.note { padding: 12px 0; background: var(--shu-soft); border-top: 3px solid var(--shu); text-indent: 0; }
-.todo { background: #fde3dc; color: #8a2f1c; font-family: var(--sans); font-size: .82em; }
-.ui, kbd { font-family: var(--sans); font-size: .86em; padding: 3px 0; border: 1px solid #d8cbb9; border-radius: 4px; background: #fff; }
 
 /* Hero title: one manuscript square per character, two ruled columns per title column. */
 .genko-title { --cell: 60px; display: flex; flex-direction: column; font-size: 44px; letter-spacing: 0; margin-block-end: var(--lh); }
@@ -135,32 +119,14 @@ ol > li::before { counter-increment: item; content: counter(item, cjk-decimal) "
   border: 1px solid var(--grid); margin-inline-start: -1px; background: #fffdf8; }
 .genko-title .col span:first-child { margin-inline-start: 0; }
 
-/* Badges and buttons: each sits inside whole columns, so the text after them stays on the rules. */
-.badges { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0 10px; margin-block-end: var(--lh); }
-.badges li { block-size: calc(var(--lh) - 6px); margin-block: 3px; padding-inline: 12px; border: 1px solid var(--shu); color: var(--shu);
-  font-size: 15px; line-height: calc(var(--lh) - 8px); }
+/* Buttons: each sits inside whole columns, so the text after them stays on the rules. */
 .buttons { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-end: var(--lh); }
 .button { display: inline-block; block-size: calc(var(--lh) * 2 - 8px); margin-block: 4px; padding-inline: 16px; border: 1px solid var(--ink);
   line-height: calc(var(--lh) * 2 - 10px); background: var(--ink); color: var(--paper); text-decoration: none; font-size: 16px; letter-spacing: .1em; text-indent: 0; }
 .button:hover { background: var(--shu); border-color: var(--shu); color: #fff; }
-.button.quiet { background: transparent; color: var(--ink); }
-.button.quiet:hover { color: #fff; }
 .button[aria-disabled="true"] { background: #a69c8c; border-color: #a69c8c; cursor: not-allowed; }
 
-/* Short items side by side (in vertical-rl a column flex runs right to left). */
-.items { display: flex; flex-direction: column; flex-wrap: wrap; }
-.item { margin-block-end: var(--lh); }
-.item p { text-indent: 0; }
-
-/* Collapsible details and tables: no borders on the block axis, so widths stay whole columns. */
-details { padding-block: 0; padding-inline: .8em; background: #fff; box-shadow: inset 0 0 0 1px var(--rule); }
-summary { cursor: pointer; color: var(--shu); font-weight: 600; }
-details p { text-indent: 0; }
-table { border-collapse: separate; border-spacing: 0; font-size: 15px; margin-block-end: var(--lh); }
-th, td { padding: 12px 0; line-height: var(--lh); vertical-align: top; background: #fff; box-shadow: inset 0 0 0 .5px var(--rule); }
-th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(--paper); }
-
-/* Images stay horizontal, with a vertical caption on the right. */
+/* Pictures stay horizontal. */
 .plate { max-width: 1120px; margin: 0 auto 44px; display: flex; flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 22px; }
 .plate img, .plate video { width: min(820px, 100%); height: auto; border: 1px solid var(--rule); box-shadow: 0 10px 30px #4a3a2418; }
 .plate figcaption { writing-mode: vertical-rl; text-orientation: upright; font-size: 14px; color: var(--muted); max-height: 520px; }
@@ -177,30 +143,6 @@ th { color: var(--shu); font-weight: 600; white-space: nowrap; background: var(-
 .plate.step .shots { display: flex; flex-direction: column; gap: 14px; }
 .plate.step { align-items: center; }
 .plate.step figcaption { font-size: 16px; color: var(--ink); line-height: 1.9; padding-inline-start: 2em; text-indent: -2em; }
-
-/* Source pages: code reads horizontally, coloured at build time, wrapped so a phone
-   never scrolls sideways. */
-.code-page { max-width: 1120px; margin: 0 auto 44px; padding: 28px 32px; background: var(--paper); border: 1px solid var(--rule); font: 15px/1.8 var(--sans); }
-.code-page h1 { font: 600 20px/1.5 var(--sans); letter-spacing: 0; margin: 0 0 12px; overflow-wrap: anywhere; }
-.code-page p { margin: 0 0 12px; }
-.code-page code { font-family: Consolas, "BIZ UDGothic", monospace; font-size: .92em; }
-.crumb { font-size: 13px; color: var(--muted); }
-.download { font-weight: 600; }
-.table-wrap { overflow-x: auto; }
-.files { border-collapse: collapse; font-size: 13px; width: 100%; }
-.files th, .files td { text-align: left; padding: 6px 10px; overflow-wrap: anywhere; border-bottom: 1px solid var(--rule); vertical-align: top; }
-.files .num { text-align: right; white-space: nowrap; }
-.files .sha { font-family: Consolas, monospace; font-size: 11px; color: var(--muted); word-break: break-all; }
-pre.code { margin: 0; padding: 12px 0; background: #fffdf8; border: 1px solid var(--rule); font: 13px/1.65 Consolas, "BIZ UDGothic", "Yu Gothic", monospace;
-  white-space: pre-wrap; overflow-wrap: anywhere; counter-reset: line; tab-size: 2; }
-pre.code .l { display: block; position: relative; padding: 0 12px 0 4.4em; min-height: 1.65em; }
-pre.code .l::before { counter-increment: line; content: counter(line); position: absolute; left: 0; width: 3.4em; text-align: right; color: #b7ab98; user-select: none; }
-pre.code .c { color: #7b8a6e; font-style: italic; }
-pre.code .s { color: #a8462c; }
-pre.code .k { color: #3d4f9a; font-weight: 600; }
-pre.code .n { color: #8a5a00; }
-pre.code .t { color: #2f6f73; }
-pre.code .a { color: #7a3f8f; }
 
 /* Colophon (okuzuke): each item is its own column. */
 footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
@@ -245,7 +187,6 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
      was sized as if it took two columns). */
   .plate.step { writing-mode: vertical-rl; flex-direction: column; justify-content: flex-start; height: 440px; }
   .plate.step .shots { writing-mode: horizontal-tb; }
-  main > .code-page { margin: 0 auto 44px; }
 }
 
 /* A laptop screen is short: the rail is set smaller, so the brand and four pages fit in one column. */
@@ -286,7 +227,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .pages > .spread { display: block; margin: 0; border: 0; box-shadow: none; }
   .pages > .spread + .spread { border-top: 1px solid var(--rule); }
   .pages > .spread + .spread > h2:first-child { margin-block-start: 0; }
-  .pages > .spread:not(:last-child) :is(.hang, .qa, .steps, .faq) > li:last-child { margin-block-end: 0; }
+  .pages > .spread:not(:last-child) :is(.hang, .steps, .faq) > li:last-child { margin-block-end: 0; }
   /* Questions follow one another without a blank column, so three tiers hold them all; the
      question in the accent colour marks where each begins. */
   .faq > li { margin-block-end: 0; }
@@ -305,10 +246,6 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .plate figcaption { writing-mode: horizontal-tb; }
   .plate.step img { width: auto; }
   .plate.step figcaption { align-self: stretch; height: auto; }
-  .code-page { padding: 16px 12px; }
-  pre.code { font-size: 12px; }
-  pre.code .l { padding-left: 3.6em; }
-  pre.code .l::before { width: 2.8em; }
   .colophon { height: 330px; padding: 20px 14px; }
   /* Rules (ご利用について) on a phone: the label runs into its text and items follow
      column after column, so a sheet is not left half empty. */
@@ -316,7 +253,6 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .pages > .spread:not(:last-child) .rules > li:last-child { margin-block-end: 0; }
   .rules .key { display: inline; inline-size: auto; }
   .rules .key::after { content: "　"; }
-  .pages .byline.spaced { margin-block-end: 0; }
   /* No blank column before the copyright, so the colophon fits a 360px screen. */
   .colophon .copy { margin-block-start: 0; }
 }

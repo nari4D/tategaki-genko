@@ -59,11 +59,11 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 `,
   'package.json': JSON.stringify({ name: 'tategaki-genko', version, private: true, scripts: { build: 'node scripts/build-chrome-extension.cjs' } }, null, 2) + '\n',
   '.gitignore': 'chrome-extension/\nsite/public/\n',
-  // Check files out byte for byte, so they match the SHA-256 list on the site.
+  // Check files out byte for byte, exactly as committed.
   '.gitattributes': '* -text\n'
 };
 
-// The site's own source, for the GitHub repository only (not in the ZIP).
+// The site's own source, for the GitHub repository only.
 const siteFiles = () => [
   'scripts/build-site.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
   ...['pages', 'images'].flatMap(dir => fs.readdirSync(path.join(root, 'site', dir)).map(name => `site/${dir}/${name}`))

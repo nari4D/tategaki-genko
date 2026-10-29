@@ -4,7 +4,7 @@
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
 // The menu lists pages, never sections of a page; the footer repeats it.
-// There is no contact page: the address is given in the store only.
+// The contact address is on ご利用について (policy.html); there is no contact form.
 const nav = [['index', 'トップ'], ['schools', '学校の方へ'], ['try', 'ためし書き'], ['policy', 'ご利用について']];
 const footer = nav;
 
