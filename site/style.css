@@ -26,10 +26,9 @@ img { max-width: 100%; height: auto; display: block; }
 :is(.spread, .rail, .colophon, .band-title, .plate figcaption) { font-variant-east-asian: full-width; }
 .tcy { text-combine-upright: all; font-variant-east-asian: normal; }
 
-.draft-banner { position: fixed; inset: 0 0 auto 0; z-index: 30; padding: 4px 12px; background: #3d3426; color: #f6ecd8; font: 12px/1.6 var(--sans); text-align: center; }
 
 /* Right-hand rail: brand and pages, set vertically. Latin letters stand upright. */
-.rail { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: var(--rail); padding: 44px 0 24px; background: var(--paper);
+.rail { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: var(--rail); padding: 28px 0 24px; background: var(--paper);
   border-left: 1px solid var(--rule); writing-mode: vertical-rl; text-orientation: upright; display: flex; align-items: center; gap: 28px; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font: 600 24px/1 var(--serif); letter-spacing: .12em; }
 .brand-mark { width: 30px; height: 30px; border: 2px solid var(--ink); border-radius: 4px; background:
@@ -41,7 +40,7 @@ img { max-width: 100%; height: auto; display: block; }
 .rail nav a { color: var(--muted); text-decoration: none; padding-inline: 4px; border-inline-start: 2px solid transparent; }
 .rail nav a:hover, .rail nav a[aria-current="page"] { color: var(--ink); border-inline-start-color: var(--shu); }
 
-main { padding: 56px calc(var(--rail) + 32px) 24px 32px; }
+main { padding: 40px calc(var(--rail) + 32px) 24px 32px; }
 
 /* A spread is one vertical page read right to left, on ruled paper. The rules are
    drawn every --lh from the right edge of the content box and scroll with the text
@@ -240,15 +239,20 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
 
 /* A laptop screen is short: the rail is set smaller, so the brand and four pages fit in one column. */
 @media (min-width: 761px) and (max-height: 820px) {
-  .rail { gap: 12px; padding-top: 36px; }
+  .rail { gap: 12px; padding-top: 22px; }
   .brand { font-size: 20px; }
   .rail nav { column-gap: 10px; font-size: 14px; }
+}
+/* Shorter still (a 1366×768 laptop with the browser's bars): smaller type keeps one column. */
+@media (min-width: 761px) and (max-height: 700px) {
+  .brand { font-size: 18px; }
+  .rail nav { font-size: 13px; }
 }
 @media (max-width: 760px) {
   /* Pages are written to fit 360px wide and 504px tall without sideways scrolling. */
   :root { --rail: 0px; --lh: 32px; --spread-h: 504px; }
   body { font-size: 16px; }
-  .rail { position: sticky; top: 22px; bottom: auto; width: auto; height: auto; padding: 10px 14px; writing-mode: horizontal-tb; flex-wrap: wrap; gap: 6px 18px;
+  .rail { position: sticky; top: 0; bottom: auto; width: auto; height: auto; padding: 10px 14px; writing-mode: horizontal-tb; flex-wrap: wrap; gap: 6px 18px;
     border-left: 0; border-bottom: 1px solid var(--rule); justify-content: space-between; }
   .brand { font-size: 19px; letter-spacing: .06em; }
   .rail nav { gap: 14px; font-size: 13px; }
@@ -264,7 +268,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   /* Set across, letters keep their own widths. */
   :is(.rail, .band-title, .plate figcaption) { font-variant-east-asian: normal; }
   .band-title::before { top: 50%; right: auto; left: 0; transform: translateY(-50%); }
-  [id] { scroll-margin-top: 164px; }  /* clear the sticky menu (two lines) when a link jumps here */
+  [id] { scroll-margin-top: 142px; }  /* clear the sticky menu (two lines) when a link jumps here */
   /* The pages of a section are tiers (dan) of one sheet: one outer border, a thin rule
      between tiers, read top to bottom, each tier right to left. */
   .pages { writing-mode: horizontal-tb; display: block; width: auto; height: auto; padding: 0; margin-bottom: 28px; overflow: visible; background: var(--paper); }

@@ -8,7 +8,7 @@ const { highlight, languageOf } = require('./highlight.cjs');
 const root = path.resolve(__dirname, '..'), site = path.join(root, 'site'), out = path.join(site, 'public');
 // The menu lists pages, never sections of a page; the footer repeats it.
 // There is no contact page: the address is given in the store only.
-const nav = [['index', 'トップ'], ['schools', '学校・教育機関の方へ'], ['try', 'ためし書き'], ['policy', '著作権とプライバシー']];
+const nav = [['index', 'トップ'], ['schools', '学校の方へ'], ['try', 'ためし書き'], ['policy', '著作権とプライバシー']];
 const footer = nav;
 
 fs.rmSync(out, { recursive: true, force: true });
@@ -43,6 +43,8 @@ fs.writeFileSync(path.join(out, '_headers'), `/try/*
 // The copyright and privacy page was legal.html while it also listed the terms.
 fs.writeFileSync(path.join(out, '_redirects'), '/legal.html /policy.html 301\n/legal /policy 301\n');
 
+// The site's own address: search engines are pointed here, not to tategaki-genko.pages.dev.
+const SITE_URL = 'https://genko.page/';
 function favicon(up) {
   return [16, 32].map(size => `<link rel="icon" type="image/png" sizes="${size}x${size}" href="${up}favicon-${size}.png">`).join('\n');
 }
@@ -59,12 +61,10 @@ function render({ name, title, description, body, up = '' }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙'}</title>
 <meta name="description" content="${description}">
-<meta name="robots" content="noindex">
-${favicon(up)}
+${up ? '' : `<link rel="canonical" href="${SITE_URL}${name === 'index' ? '' : name}">\n`}${favicon(up)}
 <link rel="stylesheet" href="${up}style.css">
 </head>
 <body>
-<div class="draft-banner">下書き（未公開）</div>
 <header class="rail">
 <a class="brand" href="${up}index.html"><span class="brand-mark" aria-hidden="true"></span>縦書き原稿用紙</a>
 <nav aria-label="サイト内">${nav.map(link).join('')}</nav>
@@ -149,4 +149,4 @@ function zip(items) {
   return Buffer.concat([...local, ...central, end]);
 }
 
-console.log('サイトの下書きを生成: ' + out + '（公開はしていません）');
+console.log('サイトを生成: ' + out + '（公開は push で）');
