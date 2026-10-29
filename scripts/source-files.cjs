@@ -32,7 +32,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 ## 紹介サイト
 
-このリポジトリには、紹介サイト（https://tategaki-genko.pages.dev）の元ファイル（\`site/\`）も入っています。\`node scripts/build-site.cjs\` を実行すると、\`site/public\` フォルダーにサイトが書き出されます。
+このリポジトリには、紹介サイト（https://genko.page）の元ファイル（\`site/\`）も入っています。\`node scripts/build-site.cjs\` を実行すると、\`site/public\` フォルダーにサイトが書き出されます。
 
 ## 著作権
 
