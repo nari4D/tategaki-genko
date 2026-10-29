@@ -2069,6 +2069,13 @@
   document.body.classList.toggle('panel-hidden', library.panelHidden === true);
   fitPaper();
   window.genkoBoot.stage('原稿一覧と用紙の描画');
+  // Opening the app means writing: a sample left open last time gives way to an
+  // empty manuscript, an existing one if there is, else a new one.
+  if (isOriginalSample(activeProject())) {
+    let blank = library.projects.find(project => !isProtectedProject(project) && !project.text && !project.title);
+    if (!blank && library.projects.length < SAFETY.newProjects) { blank = newProject(); library.projects.push(blank); }
+    if (blank) library.activeId = blank.id;
+  }
   showProject();
   if (sampleMigrationPending) {
     persist();
