@@ -91,7 +91,10 @@ for (const file of fs.readdirSync(path.join(site, 'pages')).filter(name => name.
   // A genko title becomes one square per character; '／' starts a new column.
   const body = source.slice(meta[0].length).replace(/<h1 class="genko-title">([^<]+)<\/h1>/g, (_, text) =>
     '<h1 class="genko-title" aria-label="' + text.replaceAll('／', '') + '">' + text.split('／').map(column => '<span class="col" aria-hidden="true">' + [...column].map(ch => '<span>' + ch + '</span>').join('') + '</span>').join('') + '</h1>');
-  fs.writeFileSync(path.join(out, file), render({ name, title, description, body: body.replaceAll('{{SOURCE_URL}}', SOURCE_URL) }));
+  // Pictures carry their fingerprint too, so a replaced image is never served from yesterday's cache.
+  const withImages = body.replace(/(src|poster)="images\/([^"?]+)"/g, (_, attr, image) =>
+    `${attr}="images/${image}?v=${crypto.createHash('sha256').update(fs.readFileSync(path.join(out, 'images', image))).digest('hex').slice(0, 10)}"`);
+  fs.writeFileSync(path.join(out, file), render({ name, title, description, body: withImages.replaceAll('{{SOURCE_URL}}', SOURCE_URL) }));
 }
 
 console.log('サイトを生成: ' + out + '（公開は push で）');
