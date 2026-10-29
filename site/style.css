@@ -240,9 +240,9 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
 
 /* A laptop screen is short: the rail is set smaller, so the brand and four pages fit in one column. */
 @media (min-width: 761px) and (max-height: 820px) {
-  .rail { gap: 18px; padding-top: 36px; }
+  .rail { gap: 12px; padding-top: 36px; }
   .brand { font-size: 20px; }
-  .rail nav { column-gap: 14px; font-size: 14px; }
+  .rail nav { column-gap: 10px; font-size: 14px; }
 }
 @media (max-width: 760px) {
   /* Pages are written to fit 360px wide and 504px tall without sideways scrolling. */
