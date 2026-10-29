@@ -1,8 +1,7 @@
 // The published source set: everything needed to build chrome-extension/ with
-// `node scripts/build-chrome-extension.cjs`, and nothing else. Used for the
-// source pages and ZIP on the site (build-site.cjs). The GitHub repository
-// (export-source.cjs) also holds the site's own source, which Cloudflare Pages
-// builds on every push. Development history, old versions and tests stay private.
+// `node scripts/build-chrome-extension.cjs`, and nothing else. The GitHub
+// repository (export-source.cjs) holds it with the site's own source, which
+// Cloudflare Pages builds on every push. Development history, old versions and tests stay private.
 const fs = require('node:fs'), path = require('node:path');
 const root = path.resolve(__dirname, '..');
 
@@ -66,7 +65,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 // The site's own source, for the GitHub repository only (not in the ZIP).
 const siteFiles = () => [
-  'scripts/build-site.cjs', 'scripts/highlight.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
+  'scripts/build-site.cjs', 'scripts/source-files.cjs', 'site/style.css', 'site/demo/demo.js',
   ...['pages', 'images'].flatMap(dir => fs.readdirSync(path.join(root, 'site', dir)).map(name => `site/${dir}/${name}`))
 ];
 // Cloudflare Pages builds the site with this Node.js version.

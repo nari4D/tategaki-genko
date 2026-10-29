@@ -276,6 +276,9 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .pages > .spread + .spread { border-top: 1px solid var(--rule); }
   .pages > .spread + .spread > h2:first-child { margin-block-start: 0; }
   .pages > .spread:not(:last-child) :is(.hang, .qa, .steps, .faq) > li:last-child { margin-block-end: 0; }
+  /* Questions follow one another without a blank column, so three tiers hold them all; the
+     question in the accent colour marks where each begins. */
+  .faq > li { margin-block-end: 0; }
   h2 { font-size: 22px; letter-spacing: .04em; }  /* 18 characters fit one column */
   .lead { font-size: 17px; }
   /* A phone cannot add a Chrome extension, so the hero keeps to its words. */
