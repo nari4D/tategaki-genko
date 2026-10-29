@@ -36,7 +36,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 ## 著作権
 
-© 2026 お鋳成（OINARI）All rights reserved. できることは [COPYRIGHT.md](COPYRIGHT.md) にあります。
+© 2026 お鋳成（OINARI）All rights reserved. 自由に使える範囲は [COPYRIGHT.md](COPYRIGHT.md) にあります。
 `,
   // No licence: all rights reserved, with only what anyone may do spelled out, as the
   // site's 「ご利用について」 (legal.html) does.
@@ -46,7 +46,7 @@ Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` �
 
 拡張機能「縦書き原稿用紙」と、このリポジトリのソースコード・画像・文章の著作権は、お鋳成（OINARI）にあります。
 
-## できること
+## 自由に使える範囲
 
 - 使う：だれでも無料で、目的を問わず使えます。個人でも、学校や会社でも使えます。
 - 原稿：書いた原稿は書いた人のものです。提出も応募も、出版や販売も自由です。

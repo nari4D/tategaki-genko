@@ -27,6 +27,9 @@ img { max-width: 100%; height: auto; display: block; }
 .tcy { text-combine-upright: all; font-variant-east-asian: normal; }
 /* An English phrase lies on its side in a vertical line, as in print. */
 .sideways { text-orientation: mixed; font-variant-east-asian: normal; }
+/* Small print: the copyright line keeps to one column. */
+.fine { font-size: 13px; color: var(--muted); }
+.fine .sideways { margin-block-start: .5em; }
 
 .draft-banner { position: fixed; inset: 0 0 auto 0; z-index: 30; padding: 4px 12px; background: #3d3426; color: #f6ecd8; font: 12px/1.6 var(--sans); text-align: center; }
 
