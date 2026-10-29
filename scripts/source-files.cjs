@@ -9,7 +9,7 @@ const files = [
   'src/chrome/editor.html', 'src/chrome/editor.css', 'src/chrome/editor.js', 'src/chrome/startup.js',
   'src/chrome/background.js', 'src/chrome/print-geometry.cjs',
   'scripts/build-chrome-extension.cjs', 'scripts/manuscript-samples.cjs', 'scripts/vertical-alternates.json',
-  'data/guide.cjs', 'data/chrome/legacy-samples.json',
+  'data/guide.cjs',
   'data/literature/sangetsuki.json', 'data/literature/chumon-no-oi-ryoriten.json',
   'assets/fonts/klee-one/KleeOne-Regular.woff2', 'assets/fonts/klee-one/OFL.txt',
   'assets/fonts/yomogi/Yomogi-Regular.woff2', 'assets/fonts/yomogi/OFL.txt'
@@ -19,23 +19,15 @@ const version = fs.readFileSync(path.join(root, 'scripts', 'build-chrome-extensi
 
 // Files written for the published set only.
 const generated = {
+  // GitHub shows this on the repository's front page.
   'README.md': `# 縦書き原稿用紙
 
-パソコン版Chromeブラウザの拡張機能「縦書き原稿用紙」のプログラム一式です（${version}）。
+パソコン版Chromeの拡張機能「縦書き原稿用紙」のソースコードです。
 
-## 拡張機能を作る
+- 紹介サイト：<https://genko.page/>
+- 自由に使ってよいこと：[COPYRIGHT.md](COPYRIGHT.md)
 
-Node.js 22以降で次のコマンドを実行すると、\`chrome-extension\` フォルダーに拡張機能が作られます。
-
-    node scripts/build-chrome-extension.cjs
-
-## 紹介サイト
-
-このリポジトリには、紹介サイト（https://genko.page）の元ファイル（\`site/\`）も入っています。\`node scripts/build-site.cjs\` を実行すると、\`site/public\` フォルダーにサイトが書き出されます。
-
-## 著作権
-
-© 2026 お鋳成（OINARI）All rights reserved. 自由に使ってよいことは [COPYRIGHT.md](COPYRIGHT.md) にあります。
+© 2026 お鋳成（OINARI）All rights reserved.
 `,
   // No licence: all rights reserved, with only what anyone may do spelled out, as the
   // site's questions and 「ご利用について」 do.

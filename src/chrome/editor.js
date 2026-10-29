@@ -80,12 +80,6 @@
   let library;
   // Filled at build time from scripts/manuscript-samples.cjs (data/literature).
   const SAMPLE_CATALOG = /* build: SAMPLE_CATALOG */[];
-  // Unedited samples of earlier editions, recognised so they can be retired.
-  // Filled at build time from data/chrome/legacy-samples.json.
-  const LEGACY_SAMPLES = /* build: LEGACY_SAMPLES */[];
-  // Samples withdrawn from the catalog for 1.0.0: 「去年の木」, 「蜘蛛の糸」 and the layout check.
-  const WITHDRAWN_SAMPLES = ['aozora-4719', 'aozora-92', 'check-layout'];
-  const WITHDRAWN_TITLES = ['去年の木 — 新美南吉', '蜘蛛の糸 — 芥川龍之介', '確認用：原稿用紙とふりがな', '確認用：句読点・かっこ', '確認用：ふりがな'];
   let sampleMigrationPending = false;
   function sampleProject(example) {
     const project = newProject(example.title, example.text);
@@ -117,31 +111,6 @@
       project.rubies = source.rubies.map(ruby => ({ ...ruby }));
       sampleMigrationPending = true;
     }
-    return stored;
-  }
-  function protectSampleLibrary(stored) {
-    if (stored.sampleProtectionVersion >= 1) return refreshOriginalSampleRubies(stored);
-    const originals = new Set();
-    for (const project of stored.projects) {
-      const source = SAMPLE_CATALOG.find(sample => sample.sampleId === project.sampleId);
-      if (!source) continue;
-      const same = project.title === source.title && project.text === source.text &&
-        JSON.stringify(project.rubies || []) === JSON.stringify(source.rubies);
-      if (same) project.sampleProtected = true;
-      else {
-        // An edited sample becomes an ordinary draft, never an overwritten original.
-        delete project.sampleId; delete project.sampleProtected;
-        originals.add(source.sampleId);
-      }
-      sampleMigrationPending = true;
-    }
-    for (const id of originals) {
-      if (stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
-      const original = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
-      try { archiveBudget([...stored.projects, original]); } catch { continue; }
-      stored.projects.push(original);
-    }
-    stored.sampleProtectionVersion = 1;
     return stored;
   }
   function updateSampleProtection() {
@@ -192,79 +161,6 @@
   function createSampleLibrary() {
     const projects = [newProject(), ...SAMPLE_CATALOG.map(sampleProject)];
     return { version: 2, sampleCatalogVersion: 6, sampleProtectionVersion: 1, activeId: projects[0].id, panelSide: 'right', panelSideVersion: 1, projects };
-  }
-  function unchangedLegacySample(project) {
-    if (project.history.length || project.driveLink || project.protected === true) return false;
-    return LEGACY_SAMPLES.some(example => project.title === example.title && project.text === example.text &&
-      normalizeFont(project.font) === normalizeFont(example.font) &&
-      JSON.stringify(project.rubies || []) === JSON.stringify(example.rubies || []));
-  }
-  function curateSampleLibrary(stored) {
-    if (stored.sampleCatalogVersion >= 6) return stored;
-    if (stored.sampleCatalogVersion >= 1) {
-      const previousCatalog = stored.sampleCatalogVersion;
-      stored.sampleCatalogVersion = 6;
-      // Append only the new work; never replace drafts or switch selection.
-      const retired = ['check-punctuation', 'check-ruby'];
-      if (!stored.projects.some(project => retired.includes(project.sampleId) || WITHDRAWN_SAMPLES.includes(project.sampleId) ||
-        SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))) return stored;
-      stored.projects = stored.projects.filter(project => {
-        if (!retired.includes(project.sampleId)) return true;
-        if (unchangedLegacySample(project)) return false;
-        delete project.sampleId; delete project.sampleProtected;
-        return true;
-      });
-      for (const [id, introduced] of [['aozora-43754', 3], ['guide', 5], ['aozora-624', 6]]) {
-        if (previousCatalog >= introduced || stored.projects.some(project => project.sampleId === id) || stored.projects.length >= SAFETY.newProjects) continue;
-        const candidate = sampleProject(SAMPLE_CATALOG.find(sample => sample.sampleId === id));
-        try { archiveBudget([...stored.projects, candidate]); } catch { continue; }
-        stored.projects.push(candidate);
-        sampleMigrationPending = true;
-      }
-      stored.projects = orderStandardSamples(stored.projects);
-      if (!stored.projects.some(project => project.id === stored.activeId)) {
-        stored.activeId = (stored.projects.find(project => project.sampleId === 'check-layout') || stored.projects[0]).id;
-      }
-      sampleMigrationPending = true;
-      return stored;
-    }
-    // Legacy samples predate sampleId. Recognize their exact title AND complete
-    // content; a title-only match must never authorize removal of edited text.
-    if (!stored.projects.some(project => LEGACY_SAMPLES.some(example => project.title === example.title))) {
-      // Mark this in memory too, so an intentionally imported old sample is not
-      // mistaken for pre-update clutter at the following restart.
-      stored.sampleCatalogVersion = 6;
-      return stored;
-    }
-    const kept = stored.projects.filter(project => !unchangedLegacySample(project));
-    for (const example of SAMPLE_CATALOG) {
-      if (kept.some(project => project.sampleId === example.sampleId) || kept.length >= SAFETY.newProjects) continue;
-      const candidate = sampleProject(example);
-      try { archiveBudget([...kept, candidate]); }
-      catch { continue; } // User manuscripts and their histories take priority.
-      kept.push(candidate);
-    }
-    stored.projects = orderStandardSamples(kept);
-    stored.sampleCatalogVersion = 6;
-    if (!kept.some(project => project.id === stored.activeId)) stored.activeId = kept[0].id;
-    sampleMigrationPending = true;
-    return stored;
-  }
-  // The withdrawn samples and the check manuscripts shipped only in pre-release
-  // builds, so every copy goes, edited or not. Those builds also kept the panel
-  // on the left; 1.0.0 moves it to the right once, saved with the next change.
-  function withdrawSamples(stored) {
-    if (stored.panelSideVersion !== 1) { stored.panelSide = 'right'; stored.panelSideVersion = 1; }
-    const kept = stored.projects.filter(project => !WITHDRAWN_SAMPLES.includes(project.sampleId) && !WITHDRAWN_TITLES.includes(project.title));
-    if (kept.length === stored.projects.length) return stored;
-    stored.projects = kept.length ? kept : [newProject()];
-    if (!stored.projects.some(project => project.id === stored.activeId)) stored.activeId = stored.projects[0].id;
-    sampleMigrationPending = true;
-    return stored;
-  }
-  function orderStandardSamples(projects) {
-    return [...SAMPLE_CATALOG.flatMap(sample => projects.filter(project => project.sampleId === sample.sampleId)),
-      ...projects.filter(project => !SAMPLE_CATALOG.some(sample => sample.sampleId === project.sampleId))];
   }
 
   // These are provisional resource bounds, not manuscript formatting rules.
@@ -1271,7 +1167,6 @@
         ? '元の保存先を保護するため上書きを停止しています。このタブの原稿をJSONで保存してください。'
         : 'ブラウザ内に記録できていません。画面の原稿は保持しています。閉じる前にJSONで保存してください。 ' + error.message);
     }
-    refreshDriveStatus();
   }
   const rubyUndoStates = new Map();
   function save(event) {
@@ -1324,7 +1219,6 @@
     refreshVersions();
     updateSampleProtection();
     render();
-    refreshDriveStatus();
   }
   function loadLibrary() {
     try {
@@ -1345,7 +1239,7 @@
           }
         }
         if (!stored.projects.some(p => p.id === stored.activeId)) stored.activeId = stored.projects[0].id;
-        stored.version = 2; return withdrawSamples(protectSampleLibrary(curateSampleLibrary(stored)));
+        stored.version = 2; return refreshOriginalSampleRubies(stored);
       }
     } catch (error) {
       storageProtected = true;
@@ -1466,7 +1360,6 @@
     if (normalizeFont(project.font) === selected) return;
     addVersion(project, 'フォント変更前');
     project.font = selected; project.updatedAt = Date.now();
-    driveMessage = null;
     persist(); refreshVersions(); render();
   });
   const rubyDialog = document.getElementById('ruby-dialog');
@@ -1729,6 +1622,16 @@
     return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) +
       '_' + two(date.getHours()) + '-' + two(date.getMinutes()) + '-' + two(date.getSeconds());
   };
+  // What a JSON file keeps of a manuscript: text, readings, font and history.
+  function manuscriptSnapshot(project) {
+    return {
+      id: project.id, title: project.title, text: project.text, font: normalizeFont(project.font),
+      rubies: normalizeRubies(project.text, project.rubies || []),
+      history: project.history.slice(-HISTORY_LIMIT).map(item => ({ id: item.id, at: item.at, kind: item.kind,
+        title: item.title, text: item.text, font: normalizeFont(item.font), rubies: normalizeRubies(item.text, item.rubies || []) })),
+      updatedAt: project.updatedAt, lastVersionAt: project.lastVersionAt, ...(project.protected === true ? { protected: true } : {})
+    };
+  }
   function saveBackup() {
     save();
     const project = activeProject();
@@ -1762,7 +1665,7 @@
     }
   });
   function parseArchive(data) {
-    const single = data && (data.format === 'tategaki-manuscript' && [1, 2].includes(data.version) || data.format === 'tategaki-drive-manuscript' && data.version === 2);
+    const single = data && (data.format === 'tategaki-manuscript' && [1, 2].includes(data.version));
     if (single) return validateArchiveProjects([data.project], data.recovery !== 'plain-text');
     if (data && [1, 2].includes(data.version)) return validateArchiveProjects(data.projects, data.recovery !== 'plain-text');
     throw Error('このアプリの原稿JSONではありません。');
@@ -1918,143 +1821,6 @@
     if (extension === 'txt') return openTextFile(file);
     alert('原稿（.json）・テキスト（.txt）を選んでください。');
   });
-  // Only the Apps Script host provides this bridge. Local HTML never claims a cloud save.
-  window.genkoBoot.stage('保存機能の確認');
-  const driveAvailable = !!window.google?.script?.run;
-  document.getElementById('drive-actions').hidden = !driveAvailable;
-  const driveStatus = document.getElementById('drive-status');
-  const driveDialog = document.getElementById('drive-dialog');
-  const driveFiles = document.getElementById('drive-files');
-  const driveListStatus = document.getElementById('drive-list-status');
-  let driveBusy = false, driveNextPage = '', driveMessage = null;
-  function manuscriptSnapshot(project) {
-    return {
-      id: project.id, title: project.title, text: project.text, font: normalizeFont(project.font),
-      rubies: normalizeRubies(project.text, project.rubies || []),
-      history: project.history.slice(-HISTORY_LIMIT).map(item => ({ id: item.id, at: item.at, kind: item.kind,
-        title: item.title, text: item.text, font: normalizeFont(item.font), rubies: normalizeRubies(item.text, item.rubies || []) })),
-      updatedAt: project.updatedAt, lastVersionAt: project.lastVersionAt, ...(project.protected === true ? { protected: true } : {})
-    };
-  }
-  function manuscriptFingerprint(project) {
-    const snapshot = manuscriptSnapshot(project);
-    // Local timestamps change when focus is saved, even without a content change.
-    return JSON.stringify([snapshot.title, snapshot.text, snapshot.font, snapshot.rubies, snapshot.history]);
-  }
-  function refreshDriveStatus() {
-    for (const id of ['drive-save', 'drive-save-as', 'drive-open', 'drive-refresh']) {
-      document.getElementById(id).disabled = !driveAvailable || driveBusy;
-    }
-    document.getElementById('drive-load').disabled = driveBusy || !driveFiles.value;
-    document.getElementById('drive-more').disabled = driveBusy;
-    driveFiles.disabled = driveBusy;
-    if (!driveAvailable) return;
-    const project = activeProject();
-    if (!project) return;
-    const binding = project.driveLink;
-    let text;
-    if (driveBusy) text = 'Google Driveと通信中です…';
-    else if (driveMessage?.projectId === project.id) text = driveMessage.text;
-    else if (!binding) text = 'この原稿はまだDriveに保存していません。';
-    else text = binding.fingerprint === manuscriptFingerprint(project)
-      ? 'Driveに保存済み · ' + new Date(binding.savedAt).toLocaleString('ja-JP')
-      : 'Driveに未保存の変更があります。';
-    driveStatus.textContent = text;
-    driveStatus.dataset.error = String(!driveBusy && driveMessage?.projectId === project.id && driveMessage.error === true);
-  }
-  function driveCall(method, argument) {
-    return new Promise((resolve, reject) => {
-      if (!driveAvailable) return reject(new Error('Googleドキュメント版で利用できます。'));
-      const runner = window.google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
-      if (method === 'save') runner.genkoDriveSave(argument);
-      else if (method === 'list') runner.genkoDriveList(argument);
-      else if (method === 'open') runner.genkoDriveOpen(argument);
-      else reject(new Error('未対応の操作です。'));
-    });
-  }
-  function driveError(error) { return error?.message || String(error || '通信に失敗しました。'); }
-  async function saveToDrive(asCopy = false) {
-    if (driveBusy || !driveAvailable) return;
-    save();
-    const project = activeProject(), projectId = project.id;
-    const snapshot = manuscriptSnapshot(project), fingerprint = manuscriptFingerprint(project);
-    const binding = asCopy ? null : project.driveLink;
-    const request = { project: snapshot };
-    if (binding) Object.assign(request, { fileId: binding.id, revision: binding.revision, fileVersion: binding.version });
-    driveBusy = true; driveMessage = null; refreshDriveStatus();
-    try {
-      const result = await driveCall('save', request);
-      if (!result?.file?.id || !result.file.version || !result.revision) throw new Error('保存結果を確認できませんでした。Driveの一覧を確認してください。');
-      // The user can keep editing or switch projects during the request.
-      const original = library.projects.find(item => item.id === projectId);
-      if (original) original.driveLink = { id: result.file.id, version: result.file.version, revision: result.revision,
-        savedAt: Date.now(), fingerprint };
-      persist();
-    } catch (error) {
-      driveMessage = { projectId, error: true, text: 'Driveに保存できませんでした。' + driveError(error) };
-    } finally { driveBusy = false; refreshDriveStatus(); }
-  }
-  async function listDriveFiles(append = false) {
-    if (driveBusy || !driveAvailable) return;
-    driveBusy = true; driveMessage = null;
-    if (!append) { driveFiles.replaceChildren(); driveNextPage = ''; }
-    driveListStatus.textContent = '原稿の一覧を読み込み中です…'; driveListStatus.dataset.error = 'false';
-    refreshDriveStatus();
-    try {
-      const result = await driveCall('list', append ? driveNextPage : '');
-      if (!Array.isArray(result?.files)) throw new Error('一覧の内容を確認できませんでした。');
-      for (const file of result.files) {
-        if (!file?.id || [...driveFiles.options].some(option => option.value === file.id)) continue;
-        const modified = file.modifiedTime ? new Date(file.modifiedTime).toLocaleString('ja-JP') : '';
-        driveFiles.add(new Option(file.name + (modified ? ' · ' + modified : ''), file.id));
-      }
-      driveNextPage = result.nextPageToken || '';
-      if (!driveFiles.value && driveFiles.options.length) driveFiles.selectedIndex = 0;
-      driveListStatus.textContent = driveFiles.options.length ? driveFiles.options.length + '件の原稿' : '保存済みの原稿はありません。';
-    } catch (error) {
-      driveListStatus.textContent = driveError(error); driveListStatus.dataset.error = 'true';
-    } finally {
-      document.getElementById('drive-more').hidden = !driveNextPage;
-      driveBusy = false; refreshDriveStatus();
-    }
-  }
-  async function openFromDrive() {
-    if (driveBusy || !driveFiles.value) return;
-    const fileId = driveFiles.value;
-    driveBusy = true; driveMessage = null; refreshDriveStatus();
-    driveListStatus.textContent = '原稿を読み込み中です…'; driveListStatus.dataset.error = 'false';
-    try {
-      const result = await driveCall('open', fileId);
-      const source = result?.project;
-      if (result?.file?.id !== fileId || !result.file.version || !result.revision ||
-          typeof source?.title !== 'string' || typeof source.text !== 'string' || !Array.isArray(source.history)) {
-        throw new Error('原稿の内容を確認できませんでした。');
-      }
-      const rubies = normalizeRubies(source.text, source.rubies || []);
-      const history = copyHistory(source);
-      save(); // Keep the current manuscript, including edits made while waiting.
-      const project = newProject(source.title, source.text);
-      Object.assign(project, { rubies, history, font: normalizeFont(source.font), lastVersionAt: Number(source.lastVersionAt) || Date.now() });
-      project.driveLink = { id: fileId, version: result.file.version, revision: result.revision,
-        savedAt: Date.now(), fingerprint: manuscriptFingerprint(project) };
-      library.projects.push(project); library.activeId = project.id;
-      persist(); showProject(); driveDialog.close(); window.scrollTo(0, 0);
-    } catch (error) {
-      driveListStatus.textContent = '開けませんでした。' + driveError(error); driveListStatus.dataset.error = 'true';
-    } finally { driveBusy = false; refreshDriveStatus(); }
-  }
-  document.getElementById('drive-save').addEventListener('click', () => saveToDrive());
-  document.getElementById('drive-save-as').addEventListener('click', () => saveToDrive(true));
-  document.getElementById('drive-open').addEventListener('click', () => {
-    save(); driveDialog.showModal(); listDriveFiles();
-  });
-  document.getElementById('drive-refresh').addEventListener('click', () => listDriveFiles());
-  document.getElementById('drive-more').addEventListener('click', () => listDriveFiles(true));
-  document.getElementById('drive-load').addEventListener('click', openFromDrive);
-  document.getElementById('drive-cancel').addEventListener('click', () => { if (!driveBusy) driveDialog.close(); });
-  driveDialog.addEventListener('cancel', event => { if (driveBusy) event.preventDefault(); });
-  driveFiles.addEventListener('change', refreshDriveStatus);
-  for (const element of [input, name]) element.addEventListener('input', () => { driveMessage = null; refreshDriveStatus(); });
   window.genkoBoot.stage('保存データと見本の読み込み');
   if (typeof ResizeObserver === 'function') {
     let observedWidth = 0, queued = false;

@@ -42,14 +42,6 @@
     </details>
 
     </div>
-    <div class="drive-controls" hidden>
-      <h2 class="panel-heading">Google Drive</h2>
-      <div id="drive-actions" hidden>
-      <button id="drive-save" class="panel-action primary-action" type="button" disabled>Driveに保存</button>
-      <div class="panel-buttons"><button id="drive-save-as" type="button" disabled>別名で保存</button><button id="drive-open" type="button" disabled>Driveから開く</button></div>
-      </div>
-      <p id="drive-status" class="small-note" role="status" aria-live="polite">Drive連携は未実装です。原稿はこのブラウザに自動保存します。Google版との受け渡しには原稿（.json）を使ってください。</p>
-    </div>
 
     <p class="app-meta"><span id="build-version">{{VERSION}}</span>　<button id="notices-open" class="link-button" type="button">作品と書体の出典</button>　<a id="site-link" href="https://genko.page/" target="_blank" rel="noopener">公式サイト</a></p>
   </aside>
@@ -70,14 +62,6 @@
   <p id="delete-project-name"></p>
   <p class="small-note">この端末のChrome内にある本文と編集履歴を削除します。この操作は元に戻せません。保存したファイルは残ります。</p>
   <div class="panel-buttons"><button id="cancel-delete" type="button" autofocus>キャンセル</button><button id="confirm-delete" type="button" class="danger-action">この原稿を削除</button></div>
-</dialog>
-<dialog id="drive-dialog" aria-labelledby="drive-dialog-title">
-  <h2 id="drive-dialog-title">Google Driveから原稿を開く</h2>
-  <p class="small-note">このアドオンで保存した原稿を表示します。今の原稿は残し、別の原稿として開きます。</p>
-  <label for="drive-files" class="file-label">保存済みの原稿</label><select id="drive-files" size="8"></select>
-  <p id="drive-list-status" class="small-note" role="status" aria-live="polite"></p>
-  <div class="panel-buttons"><button id="drive-refresh" type="button">再読み込み</button><button id="drive-more" type="button" hidden>さらに表示</button></div>
-  <div class="panel-buttons"><button id="drive-load" class="primary-action" type="button" disabled>選んだ原稿を開く</button><button id="drive-cancel" type="button">閉じる</button></div>
 </dialog>
 <button id="show-panel" type="button" title="パネルを表示" aria-label="操作欄を戻す">操作欄を戻す</button>
 

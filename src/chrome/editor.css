@@ -30,13 +30,7 @@
   .app-meta .link-button { padding: 0; border: 0; background: none; color: #47685b; font: inherit; text-decoration: underline; cursor: pointer; }
   .app-meta a { color: #47685b; }
   .file-feedback { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: #365545; }
-  .drive-controls { margin-top: 16px; padding-top: 13px; border-top: 1px solid #e2e7e1; }
   button:disabled { opacity: .48; cursor: default; }
-  #drive-status[data-error="true"], #drive-list-status[data-error="true"] { color: #9b3932; }
-  #drive-dialog { width: min(540px, calc(100vw - 32px)); padding: 22px; border: 1px solid #bacbbb; border-radius: 8px; color: var(--ink); }
-  #drive-dialog::backdrop { background: #172e264d; }
-  #drive-dialog h2 { font-size: 18px; margin: 0 0 12px; }
-  #drive-files { width: 100%; height: 230px; padding: 8px; margin-top: 8px; border: 1px solid #cbd5d0; font: inherit; font-size: 14px; }
   .history-controls { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e7e1; }
   .history-controls summary { cursor: pointer; color: #67796c; font-size: 12px; }
   .history-controls select { margin-top: 10px; font-size: 12px; }
