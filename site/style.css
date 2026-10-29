@@ -25,9 +25,8 @@ img { max-width: 100%; height: auto; display: block; }
    ascender (l) meet in a vertical line. Full-width forms centre each letter in its cell. */
 :is(.spread, .rail, .colophon, .band-title, .plate figcaption) { font-variant-east-asian: full-width; }
 .tcy { text-combine-upright: all; font-variant-east-asian: normal; }
-/* A sentence that just fills a column (29 characters) on a wide screen: no indent, and
+/* A sentence that just fills a column (29 characters with its indent) on a wide screen:
    a line break that only shorter columns use, a phone's or a screen up to 680px tall. */
-.flush { text-indent: 0; }
 .phone-break { display: none; }
 @media (max-height: 680px) { .phone-break { display: inline; } }
 
