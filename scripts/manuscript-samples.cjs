@@ -44,29 +44,20 @@ const samples = [
   ...literatureOrder.map(id => previousSamples.find(sample => sample.sampleId === id))
 ];
 
+// What the in-app sources dialog lists: the colophon Aozora Bunko asks reusers
+// to keep, the library card, and what this app changed.
 const notice = [
-  '標準見本の出典', '',
+  '見本の作品', '',
   chumon.title + '／' + chumon.author,
-  '図書カード：' + chumon.cardUrl, '本文：' + chumon.textUrl,
   '底本：「' + chumon.baseBook + '」' + chumon.publisher, chumon.baseEdition,
-  '初出：' + chumon.firstPublished, '入力：' + chumon.inputBy, '校正：' + chumon.proofreadBy.join('、'),
-  '2005年1月26日作成', chumon.originNotice,
-  'このアプリでの変換：' + chumon.conversion,
-  '宮沢賢治は1933年9月21日没。本作品は日本で著作権保護期間が満了した作品です。',
-  '青空文庫の収録ファイルの取り扱い規準：' + chumon.reuseUrl,
-  '本作品の本文・青空文庫由来のデータに、アプリ独自の外部再配布禁止条件は付しません。',
-  '図書カードの書誌データ：青空文庫、CC BY 4.0（https://creativecommons.org/licenses/by/4.0/）。',
-  '青空文庫は本アプリの制作・公認に関与していません。', '',
+  '入力：' + chumon.inputBy, '校正：' + chumon.proofreadBy.join('、'), '2005年1月26日作成',
+  chumon.originNotice, '図書カード：' + chumon.cardUrl,
+  '変更：看板の字下げを全角空白に置き換え、題名と著者名の2行を加えました。', '',
   additionalLiterary.title + '／' + additionalLiterary.author,
-  '図書カード：' + additionalLiterary.cardUrl, '本文：' + additionalLiterary.textUrl,
-  '底本：「' + additionalLiterary.baseBook + '」' + additionalLiterary.publisher,
-  additionalLiterary.baseEdition, '親本：' + additionalLiterary.parentBook,
-  '入力：' + additionalLiterary.inputBy, '校正：' + additionalLiterary.proofreadBy.join('、'),
-  '1997年11月10日公開、2011年1月28日修正', additionalLiterary.originNotice,
-  'このアプリでの変換：' + additionalLiterary.conversion,
-  '芥川龍之介は1927年7月24日没。本作品は日本で著作権保護期間が満了した作品です。',
-  '青空文庫の収録ファイルの取り扱い規準：' + additionalLiterary.reuseUrl,
-  '本作品の本文・青空文庫由来のデータにも、アプリ独自の外部再配布禁止条件は付しません。', ''
+  '底本：「' + additionalLiterary.baseBook + '」' + additionalLiterary.publisher, additionalLiterary.baseEdition,
+  '入力：' + additionalLiterary.inputBy, '校正：' + additionalLiterary.proofreadBy.join('、'), '1997年11月10日公開、2011年1月28日修正',
+  additionalLiterary.originNotice, '図書カード：' + additionalLiterary.cardUrl,
+  '変更：章見出しと末尾の日付の字下げを全角空白に、外字1字を「犍」に置き換え、題名と著者名の2行を加えました。', ''
 ].join('\n');
 
 module.exports = { samples, additionalLiterary, chumon, notice, unmark };

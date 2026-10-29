@@ -36,14 +36,13 @@ for (const [file, source] of Object.entries(scripts)) {
   new vm.Script(source, { filename: file });
   fs.writeFileSync(path.join(out, file), source);
 }
-let notices = notice;
 for (const font of fonts) {
   const target = path.join(out, 'fonts', font.id);
   fs.mkdirSync(target, { recursive: true });
   for (const name of [font.stem + '.woff2', 'OFL.txt']) fs.copyFileSync(path.join(root, 'assets', 'fonts', font.id, name), path.join(target, name));
-  notices += '\n' + font.family + ': SIL Open Font License 1.1\n' +
-    '著作権表示と全文ライセンス：fonts/' + font.id + '/OFL.txt\nこのフォントにはアプリ独自の再配布禁止条件を付しません。\n';
 }
+const notices = notice + '\n書体\n\n' + fonts.map(font => font.family).join('・') + '：SIL Open Font License 1.1\n' +
+  '著作権表示とライセンス全文：' + fonts.map(font => 'fonts/' + font.id + '/OFL.txt').join('、') + '\n';
 fs.writeFileSync(path.join(out, 'notices.txt'), notices);
 // The same text is shown in the app's 「作品と書体の出典」 dialog.
 const escapeHtml = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
