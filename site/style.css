@@ -25,10 +25,9 @@ img { max-width: 100%; height: auto; display: block; }
    ascender (l) meet in a vertical line. Full-width forms centre each letter in its cell. */
 :is(.spread, .rail, .colophon, .band-title, .plate figcaption) { font-variant-east-asian: full-width; }
 .tcy { text-combine-upright: all; font-variant-east-asian: normal; }
-/* A sentence that just fills a column (29 characters with its indent) on a wide screen:
-   a line break that only shorter columns use, a phone's or a screen up to 680px tall. */
-.phone-break { display: none; }
-@media (max-height: 680px) { .phone-break { display: inline; } }
+/* A sentence of 29 characters (with its indent) kept to one column: on a short screen or
+   a phone its type shrinks just enough to fit the sheet's height. */
+.one-line { font-size: min(1em, calc((var(--spread-h) - 72px) / 29.5)); }
 
 
 /* Right-hand rail: brand and pages, set vertically. Latin letters stand upright. */
@@ -293,7 +292,7 @@ footer { padding: 0 calc(var(--rail) + 32px) 48px 32px; }
   .hero .buttons { display: none; }
   .hero .more { display: none; }
   .hero .narrow { display: block; }
-  .phone-break { display: inline; }
+  .one-line { font-size: min(1em, calc((var(--spread-h) - 48px) / 29.5)); }
   /* Title, a blank column and five lines: ten columns fit a 360px screen. */
   .hero { padding: 24px 7px; }
   .demo { display: none; }
