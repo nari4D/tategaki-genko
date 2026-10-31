@@ -45,6 +45,8 @@ fs.writeFileSync(path.join(out, '_headers'), `/try/*
 // The site's own address: search engines are pointed here, not to tategaki-genko.pages.dev.
 const SITE_URL = 'https://genko.page/';
 const SOURCE_URL = 'https://github.com/nari4D/tategaki-genko';
+// The extension's page in the Chrome Web Store (published 2026-10-31).
+const STORE_ID = 'ajkpkapkhmhflkcfjmicbdbnboaihjep', STORE_URL = 'https://chromewebstore.google.com/detail/' + STORE_ID;
 // The copyright and privacy page was legal.html while it also listed the terms;
 // the source code moved from /source/ to GitHub.
 fs.writeFileSync(path.join(out, '_redirects'), `/legal.html /policy.html 301\n/legal /policy 301\n/source/* ${SOURCE_URL} 301\n/source ${SOURCE_URL} 301\n`);
@@ -94,7 +96,7 @@ for (const file of fs.readdirSync(path.join(site, 'pages')).filter(name => name.
   // Pictures carry their fingerprint too, so a replaced image is never served from yesterday's cache.
   const withImages = body.replace(/(src|poster)="images\/([^"?]+)"/g, (_, attr, image) =>
     `${attr}="images/${image}?v=${crypto.createHash('sha256').update(fs.readFileSync(path.join(out, 'images', image))).digest('hex').slice(0, 10)}"`);
-  fs.writeFileSync(path.join(out, file), render({ name, title, description, body: withImages.replaceAll('{{SOURCE_URL}}', SOURCE_URL) }));
+  fs.writeFileSync(path.join(out, file), render({ name, title, description, body: withImages.replaceAll('{{SOURCE_URL}}', SOURCE_URL).replaceAll('{{STORE_URL}}', STORE_URL).replaceAll('{{STORE_ID}}', STORE_ID) }));
 }
 
 console.log('サイトを生成: ' + out + '（公開は push で）');
