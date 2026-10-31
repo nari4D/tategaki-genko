@@ -54,7 +54,14 @@ const styleVersion = crypto.createHash('sha256').update(fs.readFileSync(path.joi
 function favicon(up) {
   return [16, 32].map(size => `<link rel="icon" type="image/png" sizes="${size}x${size}" href="${up}favicon-${size}.png">`).join('\n');
 }
+// Link previews (Note, X, LINE and others) read these; the picture comes from make-store-assets.py.
+function ogp(name, pageTitle, description) {
+  return [['og:type', 'website'], ['og:site_name', '縦書き原稿用紙'], ['og:title', pageTitle], ['og:description', description],
+    ['og:url', SITE_URL + (name === 'index' ? '' : name)], ['og:image', SITE_URL + 'images/ogp.png'], ['og:image:width', '1200'], ['og:image:height', '630']]
+    .map(([property, content]) => `<meta property="${property}" content="${content}">\n`).join('') + '<meta name="twitter:card" content="summary_large_image">\n';
+}
 function render({ name, title, description, body, up = '' }) {
+  const pageTitle = name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙';
   const link = ([target, label]) => {
     const [page, hash] = target.split('#');
     return `<a href="${up}${page}.html${hash ? '#' + hash : ''}"${!up && page === name && !hash ? ' aria-current="page"' : ''}>${label}</a>`;
@@ -64,10 +71,10 @@ function render({ name, title, description, body, up = '' }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${name === 'index' && !up ? '縦書き原稿用紙 — パソコン版Chromeブラウザの拡張機能' : title + ' — 縦書き原稿用紙'}</title>
+<title>${pageTitle}</title>
 <meta name="description" content="${description}">
 <meta name="robots" content="noindex">
-${up ? '' : `<link rel="canonical" href="${SITE_URL}${name === 'index' ? '' : name}">\n`}${favicon(up)}
+${up ? '' : `<link rel="canonical" href="${SITE_URL}${name === 'index' ? '' : name}">\n${ogp(name, pageTitle, description)}`}${favicon(up)}
 <link rel="stylesheet" href="${up}style.css?v=${styleVersion}">
 </head>
 <body>
