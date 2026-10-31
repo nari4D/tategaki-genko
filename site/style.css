@@ -126,9 +126,9 @@ ul { padding-inline-start: 1.6em; }
 .button { display: inline-block; block-size: calc(var(--lh) * 2 - 8px); margin-block: 4px; padding-inline: 16px; border: 1px solid var(--ink);
   line-height: calc(var(--lh) * 2 - 10px); background: var(--ink); color: var(--paper); text-decoration: none; font-size: 16px; letter-spacing: .1em; text-indent: 0; }
 .button:hover { background: var(--shu); border-color: var(--shu); color: #fff; }
-/* Adding to Chrome is the main step: vermilion, beside the ink ためし書き button. */
-.button.store { background: var(--shu); border-color: var(--shu); }
-.button.store:hover { background: #8f3522; border-color: #8f3522; }
+/* ためし書き is the first step: vermilion, beside the ink 「Chromeに追加」 button. */
+.button.shu { background: var(--shu); border-color: var(--shu); }
+.button.shu:hover { background: #8f3522; border-color: #8f3522; }
 
 /* Pictures stay horizontal. */
 .plate { max-width: 1120px; margin: 0 auto 44px; display: flex; flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 22px; }
